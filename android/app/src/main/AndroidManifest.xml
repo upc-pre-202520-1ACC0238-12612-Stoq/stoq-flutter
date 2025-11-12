@@ -3,11 +3,10 @@
         android:label="stoq_flutter"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        
-        <!-- AGREGAR ESTO DENTRO DE <application> -->
+    
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="TU_API_KEY_DE_GOOGLE_MAPS"/>
+            android:value="AIzaSyBChlToINIxj0fx063lkB5jUxVa_f7lZbM"/>
         
         <activity
             android:name=".MainActivity"
@@ -34,7 +33,6 @@
             android:value="2" />
     </application>
     
-    <!-- AGREGAR ESTOS PERMISOS FUERA DE <application> -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />

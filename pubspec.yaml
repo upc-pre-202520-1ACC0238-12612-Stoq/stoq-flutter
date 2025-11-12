@@ -36,6 +36,11 @@ dependencies:
 
   google_maps_flutter: ^2.5.0
   geolocator: ^11.0.0
+
+  
+  # flutter_map: ^6.1.0    
+  # latlong2: ^0.8.1  
+
   shared_preferences: ^2.2.2 
 
 dev_dependencies:

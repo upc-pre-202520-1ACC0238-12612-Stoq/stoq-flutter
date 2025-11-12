@@ -23,7 +23,7 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Datos de ejemplo del dashboard original
+  // Datos de ejemplo del dashboard mockup
   final List<Map<String, dynamic>> _productos = [
     {
       'nombre': 'Leche',

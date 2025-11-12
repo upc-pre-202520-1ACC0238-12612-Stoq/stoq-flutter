@@ -14,7 +14,7 @@ class MultiBranchInventoryScreen extends StatefulWidget {
 }
 
 class _MultiBranchInventoryScreenState extends State<MultiBranchInventoryScreen> {
-  String _selectedBranchId = 'all'; // 'all' para vista consolidada
+  String _selectedBranchId = 'all'; 
   final List<Product> _products = Product.sampleProducts;
   
 

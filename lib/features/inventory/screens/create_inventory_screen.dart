@@ -22,6 +22,22 @@ class _CreateInventoryScreenState extends State<CreateInventoryScreen> {
   Branch? _selectedBranch;
   bool _isCreating = false;
 
+  // Método para actualizar el título dinámicamente
+  String _getAppBarTitle() {
+    if (_nameController.text.isNotEmpty) {
+      return _nameController.text;
+    }
+    return 'Crear Inventario';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController.addListener(() {
+      setState(() {}); 
+    });
+  }
+
   Future<void> _selectLocation() async {
     final branch = await Navigator.push(
       context,
@@ -40,48 +56,48 @@ class _CreateInventoryScreenState extends State<CreateInventoryScreen> {
   }
 
   Future<void> _createInventory() async {
-  if (_formKey.currentState!.validate() && _selectedBranch != null) {
-    setState(() {
-      _isCreating = true;
-    });
-
-    // Crear el objeto Inventory
-    final inventory = Inventory(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: _nameController.text,
-      description: _descriptionController.text,
-      branch: _selectedBranch!,
-      createdAt: DateTime.now(),
-    );
-
-    // Guardar en SharedPreferences
-    await InventoryService.saveInventory(inventory);
-
-    if (mounted) {
+    if (_formKey.currentState!.validate() && _selectedBranch != null) {
       setState(() {
-        _isCreating = false;
+        _isCreating = true;
       });
-      
-      // Navegar a la pantalla de gestión de inventario
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => InventoryManagementScreen(
-            inventoryName: inventory.name,
-            branch: inventory.branch,
+
+      // Crear el objeto Inventory
+      final inventory = Inventory(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: _nameController.text,
+        description: _descriptionController.text,
+        branch: _selectedBranch!,
+        createdAt: DateTime.now(),
+      );
+
+      // Guardar en SharedPreferences
+      await InventoryService.saveInventory(inventory);
+
+      if (mounted) {
+        setState(() {
+          _isCreating = false;
+        });
+        
+        // Navegar a la pantalla de gestión de inventario
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => InventoryManagementScreen(
+              inventoryName: inventory.name,
+              branch: inventory.branch,
+            ),
           ),
+        );
+      }
+    } else if (_selectedBranch == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor selecciona una ubicación en el mapa'),
+          backgroundColor: AppColors.warning,
         ),
       );
     }
-  } else if (_selectedBranch == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Por favor selecciona una ubicación en el mapa'),
-        backgroundColor: AppColors.warning,
-      ),
-    );
   }
-}
 
   @override
   void dispose() {
@@ -101,7 +117,13 @@ class _CreateInventoryScreenState extends State<CreateInventoryScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const LogoWidget(size: 40),
+        title: Text(
+          _getAppBarTitle(), 
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -137,7 +159,9 @@ class _CreateInventoryScreenState extends State<CreateInventoryScreen> {
                     ),
                     const SizedBox(height: AppSizes.paddingSmall),
                     Text(
-                      'Configura tu espacio de trabajo',
+                      _nameController.text.isNotEmpty 
+                          ? 'Configurando: ${_nameController.text}' 
+                          : 'Configura tu espacio de trabajo',
                       style: TextStyle(
                         fontSize: 16,
                         color: AppColors.darkGray, 
@@ -295,9 +319,9 @@ class _CreateInventoryScreenState extends State<CreateInventoryScreen> {
                         ),
                         child: _isCreating
                             ? const CircularProgressIndicator(color: AppColors.textLight)
-                            : const Text(
-                                'Crear Inventario',
-                                style: TextStyle(
+                            : Text(
+                                'Crear ${_nameController.text.isNotEmpty ? _nameController.text : "Inventario"}', 
+                                style: const TextStyle(
                                   color: AppColors.textLight,
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/widgets/logo_widget.dart';
+import 'create_inventory_screen.dart';
 
 class InventoryByBatchScreen extends StatefulWidget {
   const InventoryByBatchScreen({super.key});
@@ -347,7 +348,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
   int _selectedView = 0; // 0: Por producto, 1: Por lote
   final TextEditingController _searchController = TextEditingController();
   
-  // Datos de ejemplo del mockup
+  // Datos de ejemplo para vista "Por producto"
   final List<Map<String, dynamic>> _products = [
     {
       'name': 'Leche',
@@ -375,6 +376,40 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
       'pricePerUnit': 3.0,
       'unit': 'kg',
       'stock': 8,
+    },
+  ];
+
+  // Datos de ejemplo para vista "Por lote"
+  final List<Map<String, dynamic>> _batches = [
+    {
+      'batchNumber': 'LOTE-001',
+      'product': 'Leche',
+      'provider': 'Rosaura Lopez',
+      'entryDate': '14/04/2024',
+      'expiryDate': '30/04/2024',
+      'quantity': 100,
+      'remaining': 45,
+      'status': 'Activo',
+    },
+    {
+      'batchNumber': 'LOTE-002',
+      'product': 'Pan',
+      'provider': 'Panadería Central', 
+      'entryDate': '16/04/2024',
+      'expiryDate': '18/04/2024',
+      'quantity': 50,
+      'remaining': 12,
+      'status': 'Activo',
+    },
+    {
+      'batchNumber': 'LOTE-003',
+      'product': 'Arroz',
+      'provider': 'Granos SAC',
+      'entryDate': '10/04/2024',
+      'expiryDate': '10/10/2024',
+      'quantity': 200,
+      'remaining': 80,
+      'status': 'Activo',
     },
   ];
 
@@ -447,7 +482,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Buscar',
+                hintText: _selectedView == 0 ? 'Buscar producto...' : 'Buscar lote...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
@@ -461,7 +496,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                 ),
               ),
               onChanged: (value) {
-                // Implementar búsqueda
+                // Implementar búsqueda según la vista seleccionada
               },
             ),
           ),
@@ -481,9 +516,9 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                     borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
                   ),
                 ),
-                child: const Text(
-                  'Generar nuevo',
-                  style: TextStyle(
+                child: Text(
+                  _selectedView == 0 ? 'Agregar Producto' : 'Crear Nuevo Lote',
+                  style: const TextStyle(
                     color: AppColors.textLight,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -520,16 +555,11 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
 
           const SizedBox(height: AppSizes.paddingMedium),
 
-          // Lista de productos
+          // Contenido dinámico según la vista seleccionada
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(AppSizes.paddingMedium),
-              itemCount: _products.length,
-              itemBuilder: (context, index) {
-                final product = _products[index];
-                return _buildProductCard(product);
-              },
-            ),
+            child: _selectedView == 0 
+                ? _buildProductsView()  // Vista por producto
+                : _buildBatchesView(),   // Vista por lote
           ),
         ],
       ),
@@ -558,6 +588,18 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  // VISTA POR PRODUCTO
+  Widget _buildProductsView() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppSizes.paddingMedium),
+      itemCount: _products.length,
+      itemBuilder: (context, index) {
+        final product = _products[index];
+        return _buildProductCard(product);
+      },
     );
   }
 
@@ -730,7 +772,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
 
           const SizedBox(height: AppSizes.paddingMedium),
 
-          // Stock (como en el mockup)
+          // Stock
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -764,45 +806,284 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
     );
   }
 
- void _showAdvancedSearch() {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return AdvancedSearchModal(
-        onFiltersApplied: (filters) {
-          // Aquí procesarías los filtros aplicados
-          print('Filtros aplicados: $filters');
-          // Aquí puedes implementar la lógica de filtrado
-          _applyFilters(filters);
-        },
-      );
-    },
-  );
-}
+  // VISTA POR LOTE
+  Widget _buildBatchesView() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppSizes.paddingMedium),
+      itemCount: _batches.length,
+      itemBuilder: (context, index) {
+        final batch = _batches[index];
+        return _buildBatchCard(batch);
+      },
+    );
+  }
 
-void _applyFilters(Map<String, dynamic> filters) {
-  // Aquí implementarías la lógica de filtrado
-  // Por ahora solo mostramos un mensaje
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('Filtros aplicados: $filters'),
-      backgroundColor: AppColors.success,
-      duration: const Duration(seconds: 2),
-    ),
-  );
-  
+  Widget _buildBatchCard(Map<String, dynamic> batch) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSizes.paddingMedium),
+      padding: const EdgeInsets.all(AppSizes.paddingMedium),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header del lote
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Lote',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    batch['batchNumber'],
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(batch['status']).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _getStatusColor(batch['status']).withOpacity(0.3)),
+                ),
+                child: Text(
+                  batch['status'],
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: _getStatusColor(batch['status']),
+                  ),
+                ),
+              ),
+            ],
+          ),
 
-}
+          const SizedBox(height: AppSizes.paddingMedium),
 
-void _generateNew() {
-  // Navegar a pantalla de crear nuevo producto
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Funcionalidad: Generar nuevo producto'),
-      backgroundColor: AppColors.info,
-    ),
-  );
-}
+          // Producto y Proveedor
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Producto',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      batch['product'],
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Proveedor',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      batch['provider'],
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSizes.paddingMedium),
+
+          // Fechas
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Fecha de entrada',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      batch['entryDate'],
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Fecha de vencimiento',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      batch['expiryDate'],
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSizes.paddingMedium),
+
+          // Cantidades
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Cantidad total',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      '${batch['quantity']} unidades',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Disponible',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      '${batch['remaining']} unidades',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'activo':
+        return AppColors.success;
+      case 'vencido':
+        return AppColors.error;
+      case 'agotado':
+        return AppColors.warning;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  void _showAdvancedSearch() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return AdvancedSearchModal(
+          onFiltersApplied: (filters) {
+            print('Filtros aplicados: $filters');
+            _applyFilters(filters);
+          },
+        );
+      },
+    );
+  }
+
+  void _applyFilters(Map<String, dynamic> filters) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Filtros aplicados: $filters'),
+        backgroundColor: AppColors.success,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _generateNew() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CreateInventoryScreen(),
+      ),
+    );
+  }
 }
