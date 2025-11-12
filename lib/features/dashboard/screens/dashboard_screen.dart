@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../auth/models/login_response.dart';
 import '../../auth/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../../shared/constants/app_constants.dart';
+import '../../../shared/widgets/logo_widget.dart';
+import '../../profile/screens/profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final LoginResponse user;
@@ -35,37 +38,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5E6D3),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5E6D3),
+        backgroundColor: AppColors.background,
         elevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.orange,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(
-            Icons.inventory_2,
-            color: Colors.white,
-          ),
+        leading: const Padding(
+          padding: EdgeInsets.all(AppSizes.paddingSmall),
+          child: LogoWidget(size: 80),
         ),
-        title: const Text(
-          'Stock Wise',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text(''), 
+        centerTitle: true,
         actions: [
           PopupMenuButton(
-            icon: const Icon(Icons.menu, color: Colors.black87),
+            icon: const Icon(Icons.menu, color: AppColors.textPrimary),
             itemBuilder: (context) => [
               PopupMenuItem(
                 child: ListTile(
                   leading: const Icon(Icons.person),
                   title: Text('${widget.user.name} ${widget.user.lastName}'),
                   subtitle: Text(widget.user.role),
+                  onTap: () {
+                    Navigator.pop(context); 
+                    Future.delayed(Duration.zero, () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProfileScreen(
+                            userName: '${widget.user.name} ${widget.user.lastName}',
+                            userRole: widget.user.role,
+                          ),
+                        ),
+                      );
+                    });
+                  },
                 ),
               ),
               PopupMenuItem(
@@ -90,27 +95,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(AppSizes.paddingLarge),
           child: Column(
             children: [
-              // Tarjetas de estadísticas superiores
+            
               Row(
                 children: [
                   Expanded(
                     child: _buildStatsCard(
                       icon: Icons.inventory_2_outlined,
-                      title: 'Total Productos',
+                      title: AppStrings.totalProducts,
                       value: '500',
-                      color: Colors.blue,
+                      color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
                     child: _buildStatsCard(
                       icon: Icons.calendar_today,
-                      title: 'Fecha Provedor',
+                      title: AppStrings.providerDate,
                       value: '00/00/00',
-                      color: Colors.purple,
+                      color: AppColors.accent,
                     ),
                   ),
                 ],
@@ -121,18 +126,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Expanded(
                     child: _buildStatsCard(
                       icon: Icons.trending_up,
-                      title: 'Historial Movimientos',
+                      title: AppStrings.movementHistory,
                       value: '',
-                      color: Colors.green,
+                      color: AppColors.success,
                     ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
                     child: _buildStatsCard(
                       icon: Icons.storage,
-                      title: 'Inventario',
+                      title: AppStrings.inventory,
                       value: '',
-                      color: Colors.brown,
+                      color: AppColors.info,
                     ),
                   ),
                 ],
@@ -142,31 +147,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // Botones de acción
               _buildActionButton(
                 icon: Icons.add_box,
-                text: 'Agregar Productos',
-                color: const Color(0xFFDC2626),
+                text: AppStrings.addProducts,
+                color: AppColors.accent,
                 onPressed: () {
-                  // TODO: Navegar a agregar productos
-                  _showComingSoon('Agregar Productos');
+                  _showComingSoon(AppStrings.addProducts);
                 },
               ),
               const SizedBox(height: 15),
               _buildActionButton(
                 icon: Icons.shopping_cart,
-                text: 'Kits Productos',
-                color: const Color(0xFFEA580C),
+                text: AppStrings.kitsProducts,
+                color: AppColors.primary,
                 onPressed: () {
-                  // TODO: Navegar a kits productos
-                  _showComingSoon('Kits Productos');
+                  _showComingSoon(AppStrings.kitsProducts);
                 },
               ),
               const SizedBox(height: 15),
               _buildActionButton(
                 icon: Icons.assignment_return,
-                text: 'Devolución Productos',
-                color: const Color(0xFFEA580C),
+                text: AppStrings.returnProducts,
+                color: AppColors.primary,
                 onPressed: () {
-                  // TODO: Navegar a devoluciones
-                  _showComingSoon('Devolución Productos');
+                  _showComingSoon(AppStrings.returnProducts);
                 },
               ),
               const SizedBox(height: 25),
@@ -195,8 +197,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -219,7 +221,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: Colors.black87,
+              color: AppColors.textPrimary,
             ),
           ),
           if (value.isNotEmpty) ...[
@@ -229,7 +231,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: AppColors.textPrimary,
               ),
             ),
           ],
@@ -252,15 +254,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           backgroundColor: color,
           padding: const EdgeInsets.symmetric(vertical: 15),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
+            borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
           ),
           elevation: 3,
         ),
-        icon: Icon(icon, color: Colors.white),
+        icon: Icon(icon, color: AppColors.textLight),
         label: Text(
           text,
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.textLight,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -279,9 +281,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.orange.shade200, width: 2),
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -301,14 +303,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 Text(
                   fecha,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade600,
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -317,9 +319,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
+              color: AppColors.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.orange.shade200),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -327,7 +329,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Icon(
                   Icons.inventory_2,
                   size: 16,
-                  color: Colors.orange.shade700,
+                  color: AppColors.primary,
                 ),
                 const SizedBox(width: 5),
                 const Text(
@@ -356,8 +358,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _showComingSoon(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$feature - Próximamente'),
-        backgroundColor: Colors.orange,
+        content: Text('$feature - ${AppStrings.comingSoon}'),
+        backgroundColor: AppColors.warning,
         duration: const Duration(seconds: 2),
       ),
     );

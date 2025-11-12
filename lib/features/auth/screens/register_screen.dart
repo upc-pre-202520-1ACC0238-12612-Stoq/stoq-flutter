@@ -1,80 +1,60 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../models/login_request.dart';
-import '../../dashboard/screens/dashboard_screen.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/widgets/logo_widget.dart';
-import 'register_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
   bool _isLoading = false;
-  bool _rememberMe = false;
   bool _obscurePassword = true;
+  bool _acceptTerms = false;
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _signIn() async {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _register() async {
+    if (_formKey.currentState!.validate() && _acceptTerms) {
       setState(() {
         _isLoading = true;
       });
 
-      try {
-        final loginRequest = LoginRequest(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-
-        final response = await _authService.signIn(loginRequest);
-
-        if (response != null && mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => DashboardScreen(user: response),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.toString()),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      // TODO: Implementar registro
+      await Future.delayed(const Duration(seconds: 2));
+      
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        // Navegar al login después del registro exitoso
+        Navigator.pop(context);
       }
+    } else if (!_acceptTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debe aceptar los términos y condiciones'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
     }
   }
 
-  void _navigateToRegister() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const RegisterScreen()),
-    );
+  void _navigateToLogin() {
+    Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _nameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -84,11 +64,11 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        leading: const Padding(
-          padding: EdgeInsets.all(AppSizes.paddingSmall),
-          child: LogoWidget(size: 150), 
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(''), 
+        title: const Text(''),
         centerTitle: true,
       ),
       body: Center(
@@ -112,22 +92,22 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const LogoWidget(size: 200),               
+                  const LogoWidget(size: 200),
                   const SizedBox(height: AppSizes.paddingLarge),
-                  /* Text(
-                    AppStrings.login,
-                    style: const TextStyle(
+                  const Text(
+                    'Regístrate',
+                    style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
                     ),
-                  ),*/
+                  ),
                   const SizedBox(height: AppSizes.paddingLarge),
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
-                      hintText: AppStrings.email,
+                      hintText: 'Correo electrónico',
                       prefixIcon: const Icon(Icons.email_outlined),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
@@ -152,10 +132,34 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: AppSizes.paddingMedium),
                   TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      hintText: 'Nombres y apellidos',
+                      prefixIcon: const Icon(Icons.person_outline),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSizes.paddingMedium,
+                        vertical: AppSizes.paddingMedium,
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor ingrese sus nombres y apellidos';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppSizes.paddingMedium),
+                  TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      hintText: AppStrings.password,
+                      hintText: 'Contraseña',
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         onPressed: () {
@@ -184,6 +188,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Por favor ingrese su contraseña';
                       }
+                      if (value.length < 6) {
+                        return 'La contraseña debe tener al menos 6 caracteres';
+                      }
                       return null;
                     },
                   ),
@@ -191,15 +198,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     children: [
                       Checkbox(
-                        value: _rememberMe,
+                        value: _acceptTerms,
                         onChanged: (value) {
                           setState(() {
-                            _rememberMe = value ?? false;
+                            _acceptTerms = value ?? false;
                           });
                         },
                         activeColor: AppColors.primary,
                       ),
-                      Text(AppStrings.rememberMe),
+                      const Expanded(
+                        child: Text('Acepto los términos y condiciones'),
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSizes.paddingMedium),
@@ -208,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: AppSizes.buttonHeight,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // TODO: Implementar login con Google
+                        // TODO: Implementar registro con Google
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.textPrimary,
@@ -217,9 +226,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       icon: const Icon(Icons.g_mobiledata, color: AppColors.textLight),
-                      label: Text(
-                        AppStrings.signInWithGoogle,
-                        style: const TextStyle(
+                      label: const Text(
+                        'Registrarse con google',
+                        style: TextStyle(
                           color: AppColors.textLight,
                           fontSize: 16,
                         ),
@@ -231,7 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: double.infinity,
                     height: AppSizes.buttonHeight,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _signIn,
+                      onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         shape: RoundedRectangleBorder(
@@ -242,9 +251,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? const CircularProgressIndicator(
                               color: AppColors.textLight,
                             )
-                          : Text(
-                              AppStrings.signIn,
-                              style: const TextStyle(
+                          : const Text(
+                              'Registrarse',
+                              style: TextStyle(
                                 color: AppColors.textLight,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -254,10 +263,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: AppSizes.paddingLarge),
                   TextButton(
-                    onPressed: _navigateToRegister,
-                    child: Text(
-                      AppStrings.noAccount,
-                      style: const TextStyle(
+                    onPressed: _navigateToLogin,
+                    child: const Text(
+                      '¿Ya tienes una cuenta? Inicia sesión',
+                      style: TextStyle(
                         color: AppColors.primary,
                         fontSize: 16,
                       ),

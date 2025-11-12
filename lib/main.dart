@@ -43,9 +43,11 @@ class _SplashScreenState extends State<SplashScreen> {
     final authService = AuthService();
     final isLoggedIn = await authService.isLoggedIn();
     
+    await Future.delayed(const Duration(seconds: 2));
+    
     if (isLoggedIn) {
       final userData = await authService.getUserData();
-      if (userData != null) {
+      if (userData != null && mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -56,12 +58,14 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     }
     
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const LoginScreen(),
-      ),
-    );
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const LoginScreen(),
+        ),
+      );
+    }
   }
 
   @override
@@ -72,6 +76,7 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Logo temporal - reemplaza con tu logo
             Container(
               width: 100,
               height: 100,
@@ -86,7 +91,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             const SizedBox(height: AppSizes.paddingLarge),
-            const Text(
+            Text(
               AppStrings.appName,
               style: TextStyle(
                 fontSize: 28,
