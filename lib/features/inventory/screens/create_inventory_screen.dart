@@ -4,6 +4,8 @@ import 'sedes_map_screen.dart';
 import 'inventory_management_screen.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/widgets/logo_widget.dart';
+import '../services/inventory_service.dart';
+import '../models/inventory_model.dart';
 
 class CreateInventoryScreen extends StatefulWidget {
   const CreateInventoryScreen({super.key});
@@ -38,39 +40,48 @@ class _CreateInventoryScreenState extends State<CreateInventoryScreen> {
   }
 
   Future<void> _createInventory() async {
-    if (_formKey.currentState!.validate() && _selectedBranch != null) {
+  if (_formKey.currentState!.validate() && _selectedBranch != null) {
+    setState(() {
+      _isCreating = true;
+    });
+
+    // Crear el objeto Inventory
+    final inventory = Inventory(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: _nameController.text,
+      description: _descriptionController.text,
+      branch: _selectedBranch!,
+      createdAt: DateTime.now(),
+    );
+
+    // Guardar en SharedPreferences
+    await InventoryService.saveInventory(inventory);
+
+    if (mounted) {
       setState(() {
-        _isCreating = true;
+        _isCreating = false;
       });
-
-      // Simular creación del inventario
-      await Future.delayed(const Duration(seconds: 2));
-
-      if (mounted) {
-        setState(() {
-          _isCreating = false;
-        });
-        
-        // Navegar a la pantalla de gestión de inventario
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => InventoryManagementScreen(
-              inventoryName: _nameController.text,
-              branch: _selectedBranch!,
-            ),
+      
+      // Navegar a la pantalla de gestión de inventario
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => InventoryManagementScreen(
+            inventoryName: inventory.name,
+            branch: inventory.branch,
           ),
-        );
-      }
-    } else if (_selectedBranch == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor selecciona una ubicación en el mapa'),
-          backgroundColor: AppColors.warning,
         ),
       );
     }
+  } else if (_selectedBranch == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Por favor selecciona una ubicación en el mapa'),
+        backgroundColor: AppColors.warning,
+      ),
+    );
   }
+}
 
   @override
   void dispose() {
