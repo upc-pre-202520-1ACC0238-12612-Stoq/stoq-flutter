@@ -115,7 +115,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.calendar_today,
                       title: AppStrings.providerDate,
                       value: '00/00/00',
-                      color: AppColors.accent,
+                      color: AppColors.redAccent,
                     ),
                   ),
                 ],
@@ -148,7 +148,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _buildActionButton(
                 icon: Icons.add_box,
                 text: AppStrings.addProducts,
-                color: AppColors.accent,
+                color: AppColors.redAccent,
                 onPressed: () {
                   _showComingSoon(AppStrings.addProducts);
                 },
