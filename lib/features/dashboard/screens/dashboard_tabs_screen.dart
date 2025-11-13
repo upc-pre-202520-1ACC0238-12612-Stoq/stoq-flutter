@@ -9,7 +9,10 @@ import '../../inventory/screens/inventory_screen.dart';
 import '../../inventory/screens/branches_map_screen.dart';
 import '../../inventory/models/branch_model.dart';
 import '../../inventory/screens/multi_branch_inventory_screen.dart';
+import '../../inventory/screens/inventory_management_screen.dart';
 import '../../products/screens/products_screen.dart';
+import '../../inventory/services/inventory_service.dart';
+import '../../inventory/models/inventory_models.dart';
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
@@ -23,30 +26,67 @@ class DashboardTabsScreen extends StatefulWidget {
 class _DashboardTabsScreenState extends State<DashboardTabsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  // Datos de ejemplo del dashboard mockup
-  final List<Map<String, dynamic>> _productos = [
-    {
-      'nombre': 'Leche',
-      'fecha': '15/05/2024',
-      'stock': 5,
-    },
-    {
-      'nombre': 'Pan',
-      'fecha': '16/05/2024',
-      'stock': 12,
-    },
-    {
-      'nombre': 'Arroz',
-      'fecha': '14/05/2024',
-      'stock': 8,
-    },
-  ];
+  final InventoryService _inventoryService = InventoryService();
+  
+  // Datos desde la API
+  List<InventoryProduct> _inventoryProducts = [];
+  List<InventoryBatch> _inventoryBatches = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this); // Ahora 3 pestañas
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final inventory = await _inventoryService.getInventory();
+      setState(() {
+        _inventoryProducts = inventory.productos;
+        _inventoryBatches = inventory.lotes;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar datos del dashboard: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  // Calcular estadísticas desde los datos reales
+  int get _totalProducts => _inventoryProducts.length;
+  int get _totalStock => _inventoryProducts.fold(0, (sum, p) => sum + p.cantidad);
+  int get _lowStockCount => _inventoryProducts.where((p) => p.stockBajo).length;
+  double get _totalValue => _inventoryProducts.fold(0.0, (sum, p) => sum + p.total);
+  
+  // Obtener próxima fecha de entrada (más reciente)
+  String get _nextDeliveryDate {
+    if (_inventoryBatches.isEmpty) return 'N/A';
+    final sortedBatches = List<InventoryBatch>.from(_inventoryBatches)
+      ..sort((a, b) => b.fechaEntrada.compareTo(a.fechaEntrada));
+    final nextBatch = sortedBatches.first;
+    return '${nextBatch.fechaEntrada.day.toString().padLeft(2, '0')}/${nextBatch.fechaEntrada.month.toString().padLeft(2, '0')}/${nextBatch.fechaEntrada.year}';
+  }
+
+  // Obtener productos recientes (últimos 3)
+  List<InventoryProduct> get _recentProducts {
+    final sorted = List<InventoryProduct>.from(_inventoryProducts)
+      ..sort((a, b) => b.fechaEntrada.compareTo(a.fechaEntrada));
+    return sorted.take(3).toList();
   }
 
   @override
@@ -162,54 +202,69 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
 
   // PESTAÑA 1: Dashboard Principal (Inicio)
   Widget _buildHomeTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSizes.paddingLarge),
+    return RefreshIndicator(
+      onRefresh: _loadDashboardData,
+      color: AppColors.primary,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSizes.paddingLarge),
       child: Column(
         children: [
           // Tarjetas de estadísticas
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatsCard(
-                  icon: Icons.inventory_2_outlined,
-                  title: 'Productos Totales',
-                  value: '500',
-                  color: AppColors.primary,
+          _isLoading
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                )
+              : Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatsCard(
+                            icon: Icons.inventory_2_outlined,
+                            title: 'Productos Totales',
+                            value: '$_totalProducts',
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: _buildStatsCard(
+                            icon: Icons.calendar_today,
+                            title: 'Próxima Entrega',
+                            value: _nextDeliveryDate,
+                            color: AppColors.redAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatsCard(
+                            icon: Icons.warning,
+                            title: 'Stock Bajo',
+                            value: '$_lowStockCount',
+                            color: AppColors.warning,
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: _buildStatsCard(
+                            icon: Icons.business,
+                            title: 'Sedes Activas',
+                            value: '${Branch.sampleBranches.length}',
+                            color: AppColors.info,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: _buildStatsCard(
-                  icon: Icons.calendar_today,
-                  title: 'Próxima Entrega',
-                  value: '20/05/2024',
-                  color: AppColors.redAccent,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 15),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatsCard(
-                  icon: Icons.trending_up,
-                  title: 'Movimientos Hoy',
-                  value: '15',
-                  color: AppColors.success,
-                ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: _buildStatsCard(
-                  icon: Icons.business,
-                  title: 'Sedes Activas',
-                  value: '4',
-                  color: AppColors.info,
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 25),
 
           // Botones de acción rápida
@@ -250,46 +305,81 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
             ),
           ),
           const SizedBox(height: 15),
-          Column(
-            children: _productos.map((producto) => _buildProductCard(
-              nombre: producto['nombre'],
-              fecha: producto['fecha'],
-              stock: producto['stock'],
-            )).toList(),
-          ),
+          _isLoading
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                )
+              : _recentProducts.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Text(
+                          'No hay productos recientes',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Column(
+                      children: _recentProducts.map((producto) {
+                        final fecha = '${producto.fechaEntrada.day.toString().padLeft(2, '0')}/${producto.fechaEntrada.month.toString().padLeft(2, '0')}/${producto.fechaEntrada.year}';
+                        return _buildProductCard(
+                          nombre: producto.productoNombre,
+                          fecha: fecha,
+                          stock: producto.cantidad,
+                        );
+                      }).toList(),
+                    ),
         ],
+      ),
       ),
     );
   }
 
   // PESTAÑA 2: Gestión de Inventario
   Widget _buildInventoryTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSizes.paddingLarge),
+    return RefreshIndicator(
+      onRefresh: _loadDashboardData,
+      color: AppColors.primary,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSizes.paddingLarge),
       child: Column(
         children: [
           // Tarjetas de resumen rápido de inventario
-          Row(
-            children: [
-              Expanded(
-                child: _buildQuickStatsCard(
-                  icon: Icons.warehouse,
-                  title: 'Stock Total',
-                  value: '4,600',
-                  color: AppColors.primary,
+          _isLoading
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: _buildQuickStatsCard(
+                        icon: Icons.warehouse,
+                        title: 'Stock Total',
+                        value: _totalStock.toString(),
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: _buildQuickStatsCard(
+                        icon: Icons.category,
+                        title: 'Productos',
+                        value: '$_totalProducts',
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: _buildQuickStatsCard(
-                  icon: Icons.category,
-                  title: 'Productos',
-                  value: '${_productos.length}',
-                  color: AppColors.success,
-                ),
-              ),
-            ],
-          ),
 
           const SizedBox(height: 20),
 
@@ -398,6 +488,7 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
             ],
           ),
         ],
+      ),
       ),
     );
   }
@@ -653,10 +744,13 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
   }
 
   void _navigateToBranchInventory(Branch branch) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Navegando a inventario de: ${branch.name}'),
-        backgroundColor: AppColors.info,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => InventoryManagementScreen(
+          inventoryName: 'Inventario ${branch.name}',
+          branch: branch,
+        ),
       ),
     );
   }

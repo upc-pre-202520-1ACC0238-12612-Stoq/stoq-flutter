@@ -5,6 +5,8 @@ import '../models/branch_model.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/widgets/logo_widget.dart';
 import 'create_transfer_screen.dart';
+import '../services/inventory_service.dart';
+import '../models/inventory_models.dart';
 
 class MultiBranchInventoryScreen extends StatefulWidget {
   const MultiBranchInventoryScreen({super.key});
@@ -14,9 +16,81 @@ class MultiBranchInventoryScreen extends StatefulWidget {
 }
 
 class _MultiBranchInventoryScreenState extends State<MultiBranchInventoryScreen> {
+  final InventoryService _inventoryService = InventoryService();
   String _selectedBranchId = 'all'; 
-  final List<Product> _products = Product.sampleProducts;
-  
+  List<InventoryProduct> _inventoryProducts = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInventory();
+  }
+
+  Future<void> _loadInventory() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final inventory = await _inventoryService.getInventory();
+      setState(() {
+        _inventoryProducts = inventory.productos;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar inventario: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  // Convertir InventoryProduct a Product para compatibilidad con la UI existente
+  List<Product> get _products {
+    return _inventoryProducts.map((ip) {
+      // Buscar un producto de ejemplo que coincida o crear uno genérico
+      final sampleProduct = Product.sampleProducts.firstWhere(
+        (p) => p.name.toLowerCase() == ip.productoNombre.toLowerCase(),
+        orElse: () => Product(
+          id: ip.productoId.toString(),
+          name: ip.productoNombre,
+          provider: ip.categoriaNombre,
+          unit: ip.unidadAbreviacion,
+          pricePerUnit: ip.precio,
+          stockByBranch: {_selectedBranchId == 'all' ? 'all' : _selectedBranchId: ip.cantidad},
+          entryDate: ip.fechaEntrada,
+          quantityPerUnit: ip.cantidad,
+        ),
+      );
+      
+      // Actualizar el stock con los datos reales
+      final updatedStock = Map<String, int>.from(sampleProduct.stockByBranch);
+      if (_selectedBranchId == 'all') {
+        updatedStock['all'] = ip.cantidad;
+      } else {
+        updatedStock[_selectedBranchId] = ip.cantidad;
+      }
+      
+      return Product(
+        id: ip.productoId.toString(),
+        name: ip.productoNombre,
+        entryDate: ip.fechaEntrada,
+        quantityPerUnit: ip.cantidad,
+        pricePerUnit: ip.precio,
+        unit: ip.unidadAbreviacion,
+        stockByBranch: updatedStock,
+        provider: sampleProduct.provider,
+      );
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +126,11 @@ class _MultiBranchInventoryScreenState extends State<MultiBranchInventoryScreen>
           
           // Lista de productos
           Expanded(
-            child: _buildProductsList(),
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  )
+                : _buildProductsList(),
           ),
         ],
       ),

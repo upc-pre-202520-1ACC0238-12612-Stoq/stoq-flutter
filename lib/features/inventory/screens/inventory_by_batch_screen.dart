@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/widgets/logo_widget.dart';
 import 'create_inventory_screen.dart';
+import '../services/inventory_service.dart';
+import '../models/inventory_models.dart';
 
 class InventoryByBatchScreen extends StatefulWidget {
   const InventoryByBatchScreen({super.key});
@@ -345,73 +347,147 @@ class _AdvancedSearchModalState extends State<AdvancedSearchModal> {
 }
 
 class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
+  final InventoryService _inventoryService = InventoryService();
   int _selectedView = 0; // 0: Por producto, 1: Por lote
   final TextEditingController _searchController = TextEditingController();
   
-  // Datos de ejemplo para vista "Por producto"
-  final List<Map<String, dynamic>> _products = [
-    {
-      'name': 'Leche',
-      'provider': 'Rosaura Lopez',
-      'entryDate': '14/04',
-      'quantityPerUnit': 20,
-      'pricePerUnit': 5.0,
-      'unit': 'ml',
-      'stock': 5,
-    },
-    {
-      'name': 'Pan', 
-      'provider': 'Panadería Central',
-      'entryDate': '16/04',
-      'quantityPerUnit': 1,
-      'pricePerUnit': 2.5,
-      'unit': 'unidad',
-      'stock': 12,
-    },
-    {
-      'name': 'Arroz',
-      'provider': 'Granos SAC', 
-      'entryDate': '14/04',
-      'quantityPerUnit': 1,
-      'pricePerUnit': 3.0,
-      'unit': 'kg',
-      'stock': 8,
-    },
-  ];
+  // Datos desde la API
+  List<InventoryProduct> _products = [];
+  List<InventoryBatch> _batches = [];
+  List<InventoryProduct> _filteredProducts = [];
+  List<InventoryBatch> _filteredBatches = [];
+  bool _isLoading = true;
+  Map<String, dynamic>? _appliedFilters;
 
-  // Datos de ejemplo para vista "Por lote"
-  final List<Map<String, dynamic>> _batches = [
-    {
-      'batchNumber': 'LOTE-001',
-      'product': 'Leche',
-      'provider': 'Rosaura Lopez',
-      'entryDate': '14/04/2024',
-      'expiryDate': '30/04/2024',
-      'quantity': 100,
-      'remaining': 45,
-      'status': 'Activo',
-    },
-    {
-      'batchNumber': 'LOTE-002',
-      'product': 'Pan',
-      'provider': 'Panadería Central', 
-      'entryDate': '16/04/2024',
-      'expiryDate': '18/04/2024',
-      'quantity': 50,
-      'remaining': 12,
-      'status': 'Activo',
-    },
-    {
-      'batchNumber': 'LOTE-003',
-      'product': 'Arroz',
-      'provider': 'Granos SAC',
-      'entryDate': '10/04/2024',
-      'expiryDate': '10/10/2024',
-      'quantity': 200,
-      'remaining': 80,
-      'status': 'Activo',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadInventory();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadInventory() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final inventory = await _inventoryService.getInventory();
+      setState(() {
+        _products = inventory.productos;
+        _batches = inventory.lotes;
+        _filteredProducts = inventory.productos;
+        _filteredBatches = inventory.lotes;
+        _isLoading = false;
+      });
+      _applyFilters();
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar inventario: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _onSearchChanged() {
+    _applyFilters();
+  }
+
+  void _applyFilters() {
+    final query = _searchController.text.toLowerCase();
+    
+    setState(() {
+      // Filtrar productos
+      _filteredProducts = _products.where((product) {
+        if (query.isEmpty) return true;
+        return product.productoNombre.toLowerCase().contains(query) ||
+               product.categoriaNombre.toLowerCase().contains(query);
+      }).toList();
+
+      // Filtrar lotes
+      _filteredBatches = _batches.where((batch) {
+        if (query.isEmpty) return true;
+        return batch.productoNombre.toLowerCase().contains(query) ||
+               batch.proveedor.toLowerCase().contains(query);
+      }).toList();
+
+      // Aplicar filtros avanzados si existen
+      if (_appliedFilters != null) {
+        _filteredProducts = _applyAdvancedFilters(_filteredProducts);
+        _filteredBatches = _applyAdvancedFiltersBatches(_filteredBatches);
+      }
+    });
+  }
+
+  List<InventoryProduct> _applyAdvancedFilters(List<InventoryProduct> products) {
+    var filtered = products;
+    
+    if (_appliedFilters?['product'] != null && _appliedFilters!['product'].toString().isNotEmpty) {
+      final productFilter = _appliedFilters!['product'].toString().toLowerCase();
+      filtered = filtered.where((p) => 
+        p.productoNombre.toLowerCase().contains(productFilter)
+      ).toList();
+    }
+
+    if (_appliedFilters?['quantity'] != null && _appliedFilters!['quantity'].toString().isNotEmpty) {
+      final minQuantity = int.tryParse(_appliedFilters!['quantity'].toString());
+      if (minQuantity != null) {
+        filtered = filtered.where((p) => p.cantidad >= minQuantity).toList();
+      }
+    }
+
+    if (_appliedFilters?['price'] != null && _appliedFilters!['price'].toString().isNotEmpty) {
+      final maxPrice = double.tryParse(_appliedFilters!['price'].toString());
+      if (maxPrice != null) {
+        filtered = filtered.where((p) => p.precio <= maxPrice).toList();
+      }
+    }
+
+    return filtered;
+  }
+
+  List<InventoryBatch> _applyAdvancedFiltersBatches(List<InventoryBatch> batches) {
+    var filtered = batches;
+    
+    if (_appliedFilters?['product'] != null && _appliedFilters!['product'].toString().isNotEmpty) {
+      final productFilter = _appliedFilters!['product'].toString().toLowerCase();
+      filtered = filtered.where((b) => 
+        b.productoNombre.toLowerCase().contains(productFilter)
+      ).toList();
+    }
+
+    if (_appliedFilters?['provider'] != null && _appliedFilters!['provider'].toString().isNotEmpty) {
+      final providerFilter = _appliedFilters!['provider'].toString().toLowerCase();
+      filtered = filtered.where((b) => 
+        b.proveedor.toLowerCase().contains(providerFilter)
+      ).toList();
+    }
+
+    if (_appliedFilters?['entryDate'] != null) {
+      final filterDate = _appliedFilters!['entryDate'] as DateTime;
+      filtered = filtered.where((b) => 
+        b.fechaEntrada.year == filterDate.year &&
+        b.fechaEntrada.month == filterDate.month &&
+        b.fechaEntrada.day == filterDate.day
+      ).toList();
+    }
+
+    return filtered;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -496,7 +572,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                 ),
               ),
               onChanged: (value) {
-                // Implementar búsqueda según la vista seleccionada
+                _applyFilters();
               },
             ),
           ),
@@ -557,9 +633,13 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
 
           // Contenido dinámico según la vista seleccionada
           Expanded(
-            child: _selectedView == 0 
-                ? _buildProductsView()  // Vista por producto
-                : _buildBatchesView(),   // Vista por lote
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  )
+                : _selectedView == 0 
+                    ? _buildProductsView()  // Vista por producto
+                    : _buildBatchesView(),   // Vista por lote
           ),
         ],
       ),
@@ -593,17 +673,41 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
 
   // VISTA POR PRODUCTO
   Widget _buildProductsView() {
+    if (_filteredProducts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 80,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: AppSizes.paddingMedium),
+            Text(
+              'No hay productos disponibles',
+              style: TextStyle(
+                fontSize: 18,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(AppSizes.paddingMedium),
-      itemCount: _products.length,
+      itemCount: _filteredProducts.length,
       itemBuilder: (context, index) {
-        final product = _products[index];
+        final product = _filteredProducts[index];
         return _buildProductCard(product);
       },
     );
   }
 
-  Widget _buildProductCard(Map<String, dynamic> product) {
+  Widget _buildProductCard(InventoryProduct product) {
+    final entryDate = '${product.fechaEntrada.day.toString().padLeft(2, '0')}/${product.fechaEntrada.month.toString().padLeft(2, '0')}';
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.paddingMedium),
       padding: const EdgeInsets.all(AppSizes.paddingMedium),
@@ -636,7 +740,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                     ),
                   ),
                   Text(
-                    product['name'],
+                    product.productoNombre,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -656,7 +760,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                     ),
                   ),
                   Text(
-                    product['provider'],
+                    product.categoriaNombre,
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textPrimary,
@@ -684,7 +788,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                       ),
                     ),
                     Text(
-                      product['entryDate'],
+                      entryDate,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -706,7 +810,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                       ),
                     ),
                     Text(
-                      '${product['quantityPerUnit']}',
+                      '${product.cantidad}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -735,7 +839,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                       ),
                     ),
                     Text(
-                      's/. ${product['pricePerUnit']}',
+                      's/. ${product.precio.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -757,7 +861,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                       ),
                     ),
                     Text(
-                      product['unit'],
+                      product.unidadAbreviacion,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -792,7 +896,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                 ),
                 const SizedBox(width: 5),
                 Text(
-                  '${product['stock']}',
+                  '${product.cantidad}',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -808,17 +912,42 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
 
   // VISTA POR LOTE
   Widget _buildBatchesView() {
+    if (_filteredBatches.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 80,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: AppSizes.paddingMedium),
+            Text(
+              'No hay lotes disponibles',
+              style: TextStyle(
+                fontSize: 18,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(AppSizes.paddingMedium),
-      itemCount: _batches.length,
+      itemCount: _filteredBatches.length,
       itemBuilder: (context, index) {
-        final batch = _batches[index];
+        final batch = _filteredBatches[index];
         return _buildBatchCard(batch);
       },
     );
   }
 
-  Widget _buildBatchCard(Map<String, dynamic> batch) {
+  Widget _buildBatchCard(InventoryBatch batch) {
+    final entryDate = '${batch.fechaEntrada.day.toString().padLeft(2, '0')}/${batch.fechaEntrada.month.toString().padLeft(2, '0')}/${batch.fechaEntrada.year}';
+    final batchNumber = 'LOTE-${batch.id.toString().padLeft(3, '0')}';
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.paddingMedium),
       padding: const EdgeInsets.all(AppSizes.paddingMedium),
@@ -851,7 +980,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                     ),
                   ),
                   Text(
-                    batch['batchNumber'],
+                    batchNumber,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -863,16 +992,16 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(batch['status']).withOpacity(0.1),
+                  color: AppColors.success.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _getStatusColor(batch['status']).withOpacity(0.3)),
+                  border: Border.all(color: AppColors.success.withOpacity(0.3)),
                 ),
-                child: Text(
-                  batch['status'],
+                child: const Text(
+                  'Activo',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: _getStatusColor(batch['status']),
+                    color: AppColors.success,
                   ),
                 ),
               ),
@@ -896,7 +1025,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                       ),
                     ),
                     Text(
-                      batch['product'],
+                      batch.productoNombre,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -918,7 +1047,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                       ),
                     ),
                     Text(
-                      batch['provider'],
+                      batch.proveedor,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -948,7 +1077,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                       ),
                     ),
                     Text(
-                      batch['entryDate'],
+                      entryDate,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -970,11 +1099,11 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                       ),
                     ),
                     Text(
-                      batch['expiryDate'],
+                      'N/A', // La API no proporciona fecha de vencimiento
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -1000,7 +1129,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                       ),
                     ),
                     Text(
-                      '${batch['quantity']} unidades',
+                      '${batch.cantidad} ${batch.unidadAbreviacion}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -1022,7 +1151,7 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
                       ),
                     ),
                     Text(
-                      '${batch['remaining']} unidades',
+                      '${batch.cantidad} ${batch.unidadAbreviacion}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -1039,19 +1168,6 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'activo':
-        return AppColors.success;
-      case 'vencido':
-        return AppColors.error;
-      case 'agotado':
-        return AppColors.warning;
-      default:
-        return AppColors.textSecondary;
-    }
-  }
-
   void _showAdvancedSearch() {
     showModalBottomSheet(
       context: context,
@@ -1060,21 +1176,22 @@ class _InventoryByBatchScreenState extends State<InventoryByBatchScreen> {
       builder: (context) {
         return AdvancedSearchModal(
           onFiltersApplied: (filters) {
-            print('Filtros aplicados: $filters');
-            _applyFilters(filters);
+            setState(() {
+              _appliedFilters = filters;
+            });
+            _applyFilters();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Filtros aplicados'),
+                  backgroundColor: AppColors.success,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
           },
         );
       },
-    );
-  }
-
-  void _applyFilters(Map<String, dynamic> filters) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Filtros aplicados: $filters'),
-        backgroundColor: AppColors.success,
-        duration: const Duration(seconds: 2),
-      ),
     );
   }
 
