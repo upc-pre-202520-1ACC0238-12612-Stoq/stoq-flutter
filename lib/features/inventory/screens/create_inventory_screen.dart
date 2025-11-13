@@ -70,24 +70,16 @@ class _CreateInventoryScreenState extends State<CreateInventoryScreen> {
         createdAt: DateTime.now(),
       );
 
-      // Guardar en SharedPreferences
-      await InventoryService.saveInventory(inventory);
+      // Simular guardado del inventario (ya no necesitamos guardarlo localmente)
+      print('Inventario creado: ${inventory.name} para sede: ${_selectedBranch!.name}');
 
       if (mounted) {
         setState(() {
           _isCreating = false;
         });
         
-        // Navegar a la pantalla de gestión de inventario
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => InventoryManagementScreen(
-              inventoryName: inventory.name,
-              branch: inventory.branch,
-            ),
-          ),
-        );
+        // Navegar de vuelta
+        Navigator.pop(context);
       }
     } else if (_selectedBranch == null) {
       ScaffoldMessenger.of(context).showSnackBar(

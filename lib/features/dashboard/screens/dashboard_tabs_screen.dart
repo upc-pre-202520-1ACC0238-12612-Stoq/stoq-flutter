@@ -5,12 +5,12 @@ import '../../auth/screens/login_screen.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/widgets/logo_widget.dart';
 import '../../profile/screens/profile_screen.dart';
-import '../../inventory/screens/inventory_by_batch_screen.dart';
+import '../../inventory/screens/inventory_screen.dart';
 import '../../inventory/screens/branches_map_screen.dart';
 import '../../inventory/models/branch_model.dart';
 import '../../inventory/screens/multi_branch_inventory_screen.dart';
 import '../../dashboard/screens/scan_product_screen.dart';
-
+import '../../products/screens/products_screen.dart';
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
@@ -218,7 +218,12 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
             icon: Icons.add_box,
             text: 'Agregar Productos',
             color: AppColors.redAccent,
-            onPressed: () => _showComingSoon('Agregar Productos'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ProductsScreen(),
+              ),
+            ),
           ),
           const SizedBox(height: 15),
           _buildActionButton(
@@ -360,13 +365,13 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const InventoryByBatchScreen(),
+                    builder: (context) => const InventoryScreen(),
                   ),
                 );
               },
               icon: const Icon(Icons.analytics, size: 24, color: AppColors.redAccent),
               label: const Text(
-                'Ver Inventario Detallado',
+                'Ver Inventario por Producto',
                 style: TextStyle(fontSize: 16,color: AppColors.redAccent,
         fontWeight: FontWeight.bold,),
               ),

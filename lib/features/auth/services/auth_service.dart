@@ -2,14 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/login_request.dart';
 import '../models/login_response.dart';
+import '../../../shared/services/storage_service.dart';
 
 class AuthService {
   static const String _baseUrl = 'http://34.39.181.148:8080/api/v1';
   static const String _loginEndpoint = '/authentication/sign-in';
-  
-  // Variables en memoria (temporal, sin persistencia)
-  static LoginResponse? _currentUser;
-  static String? _currentToken;
 
   Future<LoginResponse?> signIn(LoginRequest loginRequest) async {
     try {
@@ -26,9 +23,9 @@ class AuthService {
         final responseData = jsonDecode(response.body);
         final loginResponse = LoginResponse.fromJson(responseData);
         
-        // Guardar en memoria
-        _currentUser = loginResponse;
-        _currentToken = loginResponse.token;
+        // Guardar token y datos del usuario de forma persistente
+        await StorageService.saveToken(loginResponse.token);
+        await StorageService.saveUserData(jsonEncode(loginResponse.toJson()));
         
         return loginResponse;
       } else if (response.statusCode == 401) {
@@ -44,19 +41,29 @@ class AuthService {
   }
 
   Future<String?> getToken() async {
-    return _currentToken;
+    return await StorageService.getToken();
   }
 
   Future<LoginResponse?> getUserData() async {
-    return _currentUser;
+    final userData = await StorageService.getUserData();
+    if (userData != null) {
+      try {
+        final userJson = jsonDecode(userData);
+        return LoginResponse.fromJson(userJson);
+      } catch (e) {
+        print('Error parsing user data: $e');
+        return null;
+      }
+    }
+    return null;
   }
 
   Future<bool> isLoggedIn() async {
-    return _currentToken != null && _currentToken!.isNotEmpty;
+    final token = await StorageService.getToken();
+    return token != null && token.isNotEmpty;
   }
 
   Future<void> signOut() async {
-    _currentUser = null;
-    _currentToken = null;
+    await StorageService.clearAll();
   }
 }
