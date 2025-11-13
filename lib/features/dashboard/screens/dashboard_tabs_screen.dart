@@ -14,6 +14,7 @@ import '../../inventory/services/inventory_service.dart';
 import '../../inventory/models/inventory_models.dart';
 import '../../combos/screens/combos_screen.dart';
 import '../../historial/screens/historial_screen.dart';
+import '../../sales/screens/sales_screen.dart';
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
@@ -304,10 +305,15 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
           ),
           const SizedBox(height: 15),
           _buildActionButton(
-            icon: Icons.assignment_return,
-            text: 'Devoluciones',
-            color: AppColors.primary,
-            onPressed: () => _showComingSoon('Devoluciones'),
+            icon: Icons.point_of_sale,
+            text: AppStrings.salesProducts,
+            color: AppColors.success,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SalesScreen(),
+              ),
+            ),
           ),
           const SizedBox(height: 25),
 
