@@ -14,6 +14,7 @@ import '../../inventory/screens/inventory_management_screen.dart';
 import '../../products/screens/products_screen.dart';
 import '../../inventory/services/inventory_service.dart';
 import '../../inventory/models/inventory_models.dart';
+import '../../dashboard/screens/scan_product_screen.dart';
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
