@@ -13,8 +13,12 @@ import '../../inventory/screens/inventory_management_screen.dart';
 import '../../products/screens/products_screen.dart';
 import '../../inventory/services/inventory_service.dart';
 import '../../inventory/models/inventory_models.dart';
+<<<<<<< HEAD
 import '../../combos/screens/combos_screen.dart';
 import '../../historial/screens/historial_screen.dart';
+=======
+import '../../dashboard/screens/scan_product_screen.dart';
+>>>>>>> ffaca85 (Pantalla plan d)
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
