@@ -8,8 +8,10 @@ import '../../profile/screens/profile_screen.dart';
 import '../../inventory/screens/inventory_screen.dart';
 import '../../inventory/screens/branches_map_screen.dart';
 import '../../inventory/models/branch_model.dart';
-import '../../inventory/screens/multi_branch_inventory_screen.dart';
 import '../../products/screens/products_screen.dart';
+import '../../combos/screens/combos_screen.dart';
+import '../services/dashboard_service.dart';
+import '../models/product.dart';
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
@@ -23,30 +25,62 @@ class DashboardTabsScreen extends StatefulWidget {
 class _DashboardTabsScreenState extends State<DashboardTabsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  // Datos de ejemplo del dashboard mockup
-  final List<Map<String, dynamic>> _productos = [
-    {
-      'nombre': 'Leche',
-      'fecha': '15/05/2024',
-      'stock': 5,
-    },
-    {
-      'nombre': 'Pan',
-      'fecha': '16/05/2024',
-      'stock': 12,
-    },
-    {
-      'nombre': 'Arroz',
-      'fecha': '14/05/2024',
-      'stock': 8,
-    },
-  ];
+  final DashboardService _dashboardService = DashboardService();
+  DashboardStats? _dashboardStats;
+  bool _isLoadingStats = false;
+  List<Product> _recentProducts = [];
+  bool _isLoadingProducts = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this); // Ahora 3 pestañas
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    await Future.wait([
+      _loadDashboardStats(),
+      _loadRecentProducts(),
+    ]);
+  }
+
+  Future<void> _loadDashboardStats() async {
+    setState(() {
+      _isLoadingStats = true;
+    });
+
+    try {
+      final stats = await _dashboardService.getDashboardStats();
+      setState(() {
+        _dashboardStats = stats;
+      });
+    } catch (e) {
+      print('Error loading dashboard stats: $e');
+    } finally {
+      setState(() {
+        _isLoadingStats = false;
+      });
+    }
+  }
+
+  Future<void> _loadRecentProducts() async {
+    setState(() {
+      _isLoadingProducts = true;
+    });
+
+    try {
+      final products = await _dashboardService.getRecentProducts();
+      setState(() {
+        _recentProducts = products;
+      });
+    } catch (e) {
+      print('Error loading recent products: $e');
+    } finally {
+      setState(() {
+        _isLoadingProducts = false;
+      });
+    }
   }
 
   @override
@@ -112,6 +146,17 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: (_isLoadingStats || _isLoadingProducts)
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+            onPressed: (_isLoadingStats || _isLoadingProducts) ? null : _loadDashboardData,
+            tooltip: 'Actualizar estadísticas',
+          ),
           PopupMenuButton(
             icon: const Icon(Icons.menu, color: AppColors.textPrimary),
             itemBuilder: (context) => [
@@ -162,8 +207,11 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
 
   // PESTAÑA 1: Dashboard Principal (Inicio)
   Widget _buildHomeTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSizes.paddingLarge),
+    return RefreshIndicator(
+      onRefresh: _loadDashboardData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSizes.paddingLarge),
       child: Column(
         children: [
           // Tarjetas de estadísticas
@@ -173,39 +221,21 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
                 child: _buildStatsCard(
                   icon: Icons.inventory_2_outlined,
                   title: 'Productos Totales',
-                  value: '500',
+                  value: _isLoadingStats 
+                      ? '...' 
+                      : (_dashboardStats?.totalProducts.toString() ?? '0'),
                   color: AppColors.primary,
                 ),
               ),
               const SizedBox(width: 15),
               Expanded(
                 child: _buildStatsCard(
-                  icon: Icons.calendar_today,
-                  title: 'Próxima Entrega',
-                  value: '20/05/2024',
-                  color: AppColors.redAccent,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 15),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatsCard(
                   icon: Icons.trending_up,
                   title: 'Movimientos Hoy',
-                  value: '15',
+                  value: _isLoadingStats 
+                      ? '...' 
+                      : (_dashboardStats?.movementsToday.toString() ?? '0'),
                   color: AppColors.success,
-                ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: _buildStatsCard(
-                  icon: Icons.business,
-                  title: 'Sedes Activas',
-                  value: '4',
-                  color: AppColors.info,
                 ),
               ),
             ],
@@ -229,7 +259,12 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
             icon: Icons.shopping_cart,
             text: 'Kits de Productos',
             color: AppColors.primary,
-            onPressed: () => _showComingSoon('Kits de Productos'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CombosScreen(),
+              ),
+            ),
           ),
           const SizedBox(height: 15),
           _buildActionButton(
@@ -250,14 +285,43 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
             ),
           ),
           const SizedBox(height: 15),
-          Column(
-            children: _productos.map((producto) => _buildProductCard(
-              nombre: producto['nombre'],
-              fecha: producto['fecha'],
-              stock: producto['stock'],
-            )).toList(),
-          ),
+          _isLoadingProducts
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              : _recentProducts.isEmpty
+                  ? Container(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No hay productos registrados',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Column(
+                      children: _recentProducts.take(5).map((product) => _buildProductCard(
+                        nombre: product.name,
+                        fecha: product.date,
+                        stock: product.stock,
+                      )).toList(),
+                    ),
         ],
+      ),
       ),
     );
   }
@@ -284,7 +348,9 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
                 child: _buildQuickStatsCard(
                   icon: Icons.category,
                   title: 'Productos',
-                  value: '${_productos.length}',
+                  value: _isLoadingProducts 
+                      ? '...' 
+                      : _recentProducts.length.toString(),
                   color: AppColors.success,
                 ),
               ),
@@ -292,33 +358,6 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
           ),
 
           const SizedBox(height: 20),
-
-          // Botón de Inventario Multi-sede
-          SizedBox(
-            width: double.infinity,
-            child: Card(
-              elevation: 3,
-              child: ListTile(
-                leading: const Icon(Icons.warehouse, color: AppColors.primary, size: 30),
-                title: const Text(
-                  'Inventario Multi-sede',
-                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
-                ),
-                subtitle: const Text('Gestión de stock por sede'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MultiBranchInventoryScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 15),
 
           // Botón rápido al inventario tradicional
           SizedBox(

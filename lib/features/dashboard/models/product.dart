@@ -16,13 +16,24 @@ class Product {
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    // Formatear fecha desde la API
+    String formattedDate = '';
+    try {
+      if (json['createdAt'] != null) {
+        final dateTime = DateTime.parse(json['createdAt']);
+        formattedDate = '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
+      }
+    } catch (e) {
+      formattedDate = 'Sin fecha';
+    }
+
     return Product(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
-      date: json['date'] ?? '',
-      stock: json['stock'] ?? 0,
+      date: formattedDate,
+      stock: 0, // Por defecto, ya que no viene en la API de productos
       description: json['description'],
-      price: json['price']?.toDouble(),
+      price: (json['salePrice'] ?? json['price'])?.toDouble(),
     );
   }
 
@@ -40,32 +51,24 @@ class Product {
 
 class DashboardStats {
   final int totalProducts;
-  final String providerDate;
-  final int movementHistory;
-  final int inventoryCount;
+  final int movementsToday;
 
   DashboardStats({
     required this.totalProducts,
-    required this.providerDate,
-    required this.movementHistory,
-    required this.inventoryCount,
+    required this.movementsToday,
   });
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
     return DashboardStats(
       totalProducts: json['totalProducts'] ?? 0,
-      providerDate: json['providerDate'] ?? '00/00/00',
-      movementHistory: json['movementHistory'] ?? 0,
-      inventoryCount: json['inventoryCount'] ?? 0,
+      movementsToday: json['movementsToday'] ?? 0,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'totalProducts': totalProducts,
-      'providerDate': providerDate,
-      'movementHistory': movementHistory,
-      'inventoryCount': inventoryCount,
+      'movementsToday': movementsToday,
     };
   }
 }
