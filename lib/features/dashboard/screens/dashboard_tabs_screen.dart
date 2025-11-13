@@ -16,6 +16,7 @@ import '../../combos/screens/combos_screen.dart';
 import '../services/dashboard_service.dart';
 import '../models/product.dart';
 import '../../historial/screens/historial_screen.dart';
+import '../../dashboard/screens/scan_product_screen.dart';
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
@@ -317,6 +318,42 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
             onPressed: () => _showComingSoon('Devoluciones'),
           ),
           const SizedBox(height: 25),
+
+          const SizedBox(height: 15),
+
+        // BOTÓN: Escanear Producto
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ScanProductScreen(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.black,
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+                ),
+                elevation: 3,
+              ),
+              icon: const Icon(Icons.camera_alt, color: AppColors.textLight, size: 24),
+              label: const Text(
+                'Escanear Producto',
+                style: TextStyle(
+                  color: AppColors.textLight,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 15),
 
           // Lista de productos recientes
           const Text(

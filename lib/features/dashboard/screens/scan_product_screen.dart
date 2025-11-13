@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:math';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:path_provider/path_provider.dart';
@@ -18,6 +17,7 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
 
   List<Map<String, dynamic>> savedProducts = [];
 
+  // TOMAR FOTO
   Future<void> takePhoto() async {
     setState(() {
       detectedLabels.clear();
@@ -49,14 +49,19 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
     _analyzeImage(imageFile!);
   }
 
+  // ANALIZAR IMAGEN CON ML KIT
   Future<void> _analyzeImage(File file) async {
     setState(() => isLoading = true);
 
     final inputImage = InputImage.fromFile(file);
-    final options = ImageLabelerOptions(confidenceThreshold: 0.5);
-    final labeler = ImageLabeler(options: options);
 
+    final options = ImageLabelerOptions(
+      confidenceThreshold: 0.5,
+    );
+
+    final labeler = ImageLabeler(options: options);
     final labels = await labeler.processImage(inputImage);
+
     detectedLabels = labels.map((e) => e.label).toList();
 
     await labeler.close();
@@ -68,6 +73,7 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
     }
   }
 
+  // MODAL DE CONFIRMACIÓN (Elegir producto + cantidad + ubicación)
   void _openConfirmationModal() {
     String selectedLabel = detectedLabels.first;
     TextEditingController qtyCtrl = TextEditingController();
@@ -102,17 +108,21 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
 
               const SizedBox(height: 20),
 
+              // Selección de etiqueta detectada
               DropdownButtonFormField<String>(
                 value: selectedLabel,
                 decoration: const InputDecoration(labelText: "Etiqueta sugerida"),
                 items: detectedLabels
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
-                onChanged: (v) => selectedLabel = v!,
+                onChanged: (v) {
+                  selectedLabel = v!;
+                },
               ),
 
               const SizedBox(height: 15),
 
+              // Cantidad
               TextField(
                 controller: qtyCtrl,
                 keyboardType: TextInputType.number,
@@ -121,10 +131,10 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
 
               const SizedBox(height: 15),
 
+              // Ubicación
               TextField(
                 controller: locationCtrl,
-                decoration:
-                const InputDecoration(labelText: "Ubicación en el almacén"),
+                decoration: const InputDecoration(labelText: "Ubicación en el almacén"),
               ),
 
               const SizedBox(height: 30),
@@ -139,8 +149,7 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        padding:
-                        const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: const Text(
                         "Cancelar",
@@ -184,8 +193,7 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        padding:
-                        const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: const Text(
                         "Guardar",
@@ -202,6 +210,7 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
     );
   }
 
+  // REINICIAR
   void resetScan() {
     setState(() {
       imageFile = null;
@@ -230,6 +239,7 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            // PREVIEW
             Container(
               height: 250,
               width: double.infinity,
@@ -239,14 +249,15 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
               ),
               child: imageFile != null
                   ? ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Image.file(imageFile!, fit: BoxFit.cover),
-              )
+                      borderRadius: BorderRadius.circular(14),
+                      child: Image.file(imageFile!, fit: BoxFit.cover),
+                    )
                   : const Icon(Icons.photo, size: 80, color: Colors.grey),
             ),
 
             const SizedBox(height: 20),
 
+            // REINTENTAR
             if (imageFile != null)
               OutlinedButton.icon(
                 icon: const Icon(Icons.refresh, color: Color(0xFF5D4037)),
