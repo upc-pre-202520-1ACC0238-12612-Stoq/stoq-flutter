@@ -8,15 +8,13 @@ import '../../profile/screens/profile_screen.dart';
 import '../../inventory/screens/inventory_screen.dart';
 import '../../inventory/screens/branches_map_screen.dart';
 import '../../inventory/models/branch_model.dart';
+import '../../dashboard/screens/scan_product_screen.dart';
 import '../../inventory/screens/inventory_management_screen.dart';
 import '../../products/screens/products_screen.dart';
 import '../../inventory/services/inventory_service.dart';
 import '../../inventory/models/inventory_models.dart';
 import '../../combos/screens/combos_screen.dart';
-import '../services/dashboard_service.dart';
-import '../models/product.dart';
 import '../../historial/screens/historial_screen.dart';
-import '../../dashboard/screens/scan_product_screen.dart';
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
@@ -30,18 +28,12 @@ class DashboardTabsScreen extends StatefulWidget {
 class _DashboardTabsScreenState extends State<DashboardTabsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final DashboardService _dashboardService = DashboardService();
   final InventoryService _inventoryService = InventoryService();
-  
-  // Datos del dashboard (pestaña Inicio)
-  DashboardStats? _dashboardStats;
-  bool _isLoadingStats = false;
-  List<Product> _recentProducts = [];
-  bool _isLoadingProducts = false;
-  
-  // Datos del inventario (pestaña Inventario)
+
+  // Datos desde la API
   List<InventoryProduct> _inventoryProducts = [];
-  bool _isLoadingInventory = true;
+  List<InventoryBatch> _inventoryBatches = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -51,70 +43,25 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
   }
 
   Future<void> _loadDashboardData() async {
-    await Future.wait([
-      _loadDashboardStats(),
-      _loadRecentProducts(),
-      _loadInventoryData(),
-    ]);
-  }
-
-  Future<void> _loadDashboardStats() async {
     setState(() {
-      _isLoadingStats = true;
-    });
-
-    try {
-      final stats = await _dashboardService.getDashboardStats();
-      setState(() {
-        _dashboardStats = stats;
-      });
-    } catch (e) {
-      print('Error loading dashboard stats: $e');
-    } finally {
-      setState(() {
-        _isLoadingStats = false;
-      });
-    }
-  }
-
-  Future<void> _loadRecentProducts() async {
-    setState(() {
-      _isLoadingProducts = true;
-    });
-
-    try {
-      final products = await _dashboardService.getRecentProducts();
-      setState(() {
-        _recentProducts = products;
-      });
-    } catch (e) {
-      print('Error loading recent products: $e');
-    } finally {
-      setState(() {
-        _isLoadingProducts = false;
-      });
-    }
-  }
-
-  Future<void> _loadInventoryData() async {
-    setState(() {
-      _isLoadingInventory = true;
+      _isLoading = true;
     });
 
     try {
       final inventory = await _inventoryService.getInventory();
       setState(() {
         _inventoryProducts = inventory.productos;
-        _isLoadingInventory = false;
+        _inventoryBatches = inventory.lotes;
+        _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _isLoadingInventory = false;
+        _isLoading = false;
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cargar datos del inventario: $e'),
+            content: Text('Error al cargar datos del dashboard: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -122,9 +69,26 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
     }
   }
 
-  // Calcular estadísticas desde los datos reales del inventario
+  // Calcular estadísticas desde los datos reales
   int get _totalProducts => _inventoryProducts.length;
   int get _totalStock => _inventoryProducts.fold(0, (sum, p) => sum + p.cantidad);
+  int get _lowStockCount => _inventoryProducts.where((p) => p.stockBajo).length;
+
+  // Obtener próxima fecha de entrada (más reciente)
+  String get _nextDeliveryDate {
+    if (_inventoryBatches.isEmpty) return 'N/A';
+    final sortedBatches = List<InventoryBatch>.from(_inventoryBatches)
+      ..sort((a, b) => b.fechaEntrada.compareTo(a.fechaEntrada));
+    final nextBatch = sortedBatches.first;
+    return '${nextBatch.fechaEntrada.day.toString().padLeft(2, '0')}/${nextBatch.fechaEntrada.month.toString().padLeft(2, '0')}/${nextBatch.fechaEntrada.year}';
+  }
+
+  // Obtener productos recientes (últimos 3)
+  List<InventoryProduct> get _recentProducts {
+    final sorted = List<InventoryProduct>.from(_inventoryProducts)
+      ..sort((a, b) => b.fechaEntrada.compareTo(a.fechaEntrada));
+    return sorted.take(3).toList();
+  }
 
   @override
   void dispose() {
@@ -190,14 +154,14 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
         centerTitle: true,
         actions: [
           IconButton(
-            icon: (_isLoadingStats || _isLoadingProducts)
+            icon: _isLoading
                 ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.refresh),
-            onPressed: (_isLoadingStats || _isLoadingProducts) ? null : _loadDashboardData,
+            onPressed: _isLoading ? null : _loadDashboardData,
             tooltip: 'Actualizar estadísticas',
           ),
           PopupMenuButton(
@@ -259,31 +223,60 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
       child: Column(
         children: [
           // Tarjetas de estadísticas
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatsCard(
-                  icon: Icons.inventory_2_outlined,
-                  title: 'Productos Totales',
-                  value: _isLoadingStats 
-                      ? '...' 
-                      : (_dashboardStats?.totalProducts.toString() ?? '0'),
-                  color: AppColors.primary,
+          _isLoading
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                )
+              : Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatsCard(
+                            icon: Icons.inventory_2_outlined,
+                            title: 'Productos Totales',
+                            value: '$_totalProducts',
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: _buildStatsCard(
+                            icon: Icons.calendar_today,
+                            title: 'Próxima Entrega',
+                            value: _nextDeliveryDate,
+                            color: AppColors.redAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatsCard(
+                            icon: Icons.warning,
+                            title: 'Stock Bajo',
+                            value: '$_lowStockCount',
+                            color: AppColors.warning,
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: _buildStatsCard(
+                            icon: Icons.business,
+                            title: 'Sedes Activas',
+                            value: '${Branch.sampleBranches.length}',
+                            color: AppColors.info,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: _buildStatsCard(
-                  icon: Icons.trending_up,
-                  title: 'Movimientos Hoy',
-                  value: _isLoadingStats 
-                      ? '...' 
-                      : (_dashboardStats?.movementsToday.toString() ?? '0'),
-                  color: AppColors.success,
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 25),
 
           // Botones de acción rápida
@@ -365,7 +358,7 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
             ),
           ),
           const SizedBox(height: 15),
-          _isLoadingProducts
+          _isLoading
               ? const Center(
                   child: Padding(
                     padding: EdgeInsets.all(20.0),
@@ -373,32 +366,27 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
                   ),
                 )
               : _recentProducts.isEmpty
-                  ? Container(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.inventory_2_outlined,
-                            size: 48,
-                            color: Colors.grey[400],
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Text(
+                          'No hay productos recientes',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 16,
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No hay productos registrados',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     )
                   : Column(
-                      children: _recentProducts.take(5).map((product) => _buildProductCard(
-                        nombre: product.name,
-                        fecha: product.date,
-                        stock: product.stock,
-                      )).toList(),
+                      children: _recentProducts.map((producto) {
+                        final fecha = '${producto.fechaEntrada.day.toString().padLeft(2, '0')}/${producto.fechaEntrada.month.toString().padLeft(2, '0')}/${producto.fechaEntrada.year}';
+                        return _buildProductCard(
+                          nombre: producto.productoNombre,
+                          fecha: fecha,
+                          stock: producto.cantidad,
+                        );
+                      }).toList(),
                     ),
         ],
       ),
@@ -417,7 +405,7 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
       child: Column(
         children: [
           // Tarjetas de resumen rápido de inventario
-          _isLoadingInventory
+          _isLoading
               ? const Center(
                   child: Padding(
                     padding: EdgeInsets.all(20.0),
