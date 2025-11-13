@@ -4,6 +4,7 @@ import '../../../shared/widgets/custom_widgets.dart';
 import '../models/product_models.dart';
 import '../services/product_service.dart';
 import '../widgets/add_product_modal.dart';
+import '../../dashboard/screens/scan_product_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -201,11 +202,39 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ],
       ),
       
-      // Botón flotante para agregar producto
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddProductModal,
-        backgroundColor: AppColors.redAccent,
-        child: const Icon(Icons.add, color: AppColors.textLight),
+      // Botones flotantes
+      floatingActionButton: Stack(
+        children: [
+          // Botón Agregar Producto
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: FloatingActionButton(
+              onPressed: _showAddProductModal,
+              backgroundColor: AppColors.redAccent,
+              heroTag: "add",
+              child: const Icon(Icons.add, color: AppColors.textLight),
+            ),
+          ),
+          // Botón Escanear Producto
+          Positioned(
+            bottom: 70,
+            right: 0,
+            child: FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ScanProductScreen(),
+                  ),
+                );
+              },
+              backgroundColor: AppColors.black,
+              heroTag: "scan",
+              child: const Icon(Icons.camera_alt, color: AppColors.textLight),
+            ),
+          ),
+        ],
       ),
     );
   }

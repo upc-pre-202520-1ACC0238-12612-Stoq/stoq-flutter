@@ -9,12 +9,10 @@ import '../../inventory/screens/inventory_screen.dart';
 import '../../inventory/screens/branches_map_screen.dart';
 import '../../inventory/models/branch_model.dart';
 import '../../inventory/screens/multi_branch_inventory_screen.dart';
-import '../../dashboard/screens/scan_product_screen.dart';
 import '../../inventory/screens/inventory_management_screen.dart';
 import '../../products/screens/products_screen.dart';
 import '../../inventory/services/inventory_service.dart';
 import '../../inventory/models/inventory_models.dart';
-import '../../dashboard/screens/scan_product_screen.dart';
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
@@ -296,42 +294,6 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
             onPressed: () => _showComingSoon('Devoluciones'),
           ),
           const SizedBox(height: 25),
-
-          const SizedBox(height: 15),
-
-        // BOTÓN: Escanear Producto
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ScanProductScreen(),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.black,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
-                ),
-                elevation: 3,
-              ),
-              icon: const Icon(Icons.camera_alt, color: AppColors.textLight, size: 24),
-              label: const Text(
-                'Escanear Producto',
-                style: TextStyle(
-                  color: AppColors.textLight,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 15),
 
           // Lista de productos recientes
           const Text(
