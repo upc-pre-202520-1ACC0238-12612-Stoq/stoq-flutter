@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../shared/constants/app_constants.dart';
-import '../../inventory/screens/create_inventory_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,11 +9,10 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _lowStockAlerts = true;
-  bool _expiryReminders = true;
-  bool _pushNotifications = true;
-  bool _autoBackup = false;
-  bool _darkMode = false;
+  bool _notificationAlerts = true;
+  bool _multiFormatNotifications = false;
+  bool _specificAlertConfig = true;
+  bool _minorRolesAlerts = false;
 
   void _saveSettings() {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -26,19 +24,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Navigator.pop(context);
   }
 
-  void _configureInventory() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const CreateInventoryScreen(),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color.fromARGB(255, 243, 238, 232),
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
@@ -56,123 +45,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSizes.paddingLarge),
+        padding: const EdgeInsets.all(AppSizes.paddingExtraLarge),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sección: Sistema de Notificaciones
-            _buildSectionTitle('Sistema de Notificaciones'),
-            _buildNotificationOption(
-              title: 'Alertas de stock bajo',
-              description: 'Recibir notificaciones cuando el stock esté bajo',
-              value: _lowStockAlerts,
-              onChanged: (value) => setState(() => _lowStockAlerts = value),
+            const SizedBox(height: AppSizes.paddingLarge),
+            
+            // Configuraciones de notificaciones
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Configuración de Notificaciones',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.paddingLarge),
+                
+                // Opción 1
+                _buildNotificationOption(
+                  title: 'Permiso de notificación de alertas',
+                  description: 'Alertas automáticas',
+                  value: _notificationAlerts,
+                  onChanged: (value) => setState(() => _notificationAlerts = value),
+                ),
+                const SizedBox(height: AppSizes.paddingMedium),
+                
+                // Opción 2
+                _buildNotificationOption(
+                  title: 'Permiso de envío de notificaciones en múltiples formatos',
+                  description: 'Recibir alertas en diferentes formatos',
+                  value: _multiFormatNotifications,
+                  onChanged: (value) => setState(() => _multiFormatNotifications = value),
+                ),
+                const SizedBox(height: AppSizes.paddingMedium),
+                
+                // Opción 3
+                _buildNotificationOption(
+                  title: 'Permiso de configuración específica de alerta',
+                  description: 'Personalizar tipos de alertas',
+                  value: _specificAlertConfig,
+                  onChanged: (value) => setState(() => _specificAlertConfig = value),
+                ),
+                const SizedBox(height: AppSizes.paddingMedium),
+                
+                // Opción 4
+                _buildNotificationOption(
+                  title: 'Roles menores pueden recibir las alertas',
+                  description: 'Extender notificaciones a roles menores',
+                  value: _minorRolesAlerts,
+                  onChanged: (value) => setState(() => _minorRolesAlerts = value),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSizes.paddingMedium),
-            _buildNotificationOption(
-              title: 'Recordatorios de productos próximos a vencer',
-              description: 'Alertas para productos cerca de su fecha de vencimiento',
-              value: _expiryReminders,
-              onChanged: (value) => setState(() => _expiryReminders = value),
-            ),
-            const SizedBox(height: AppSizes.paddingMedium),
-            _buildNotificationOption(
-              title: 'Notificaciones push',
-              description: 'Recibir notificaciones push en tiempo real',
-              value: _pushNotifications,
-              onChanged: (value) => setState(() => _pushNotifications = value),
-            ),
-
+            
             const SizedBox(height: AppSizes.paddingExtraLarge),
-
-            // Sección: Preferencias de la App
-            _buildSectionTitle('Preferencias de la App'),
-            _buildNotificationOption(
-              title: 'Modo oscuro',
-              description: 'Activar el tema oscuro en la aplicación',
-              value: _darkMode,
-              onChanged: (value) => setState(() => _darkMode = value),
-            ),
-            const SizedBox(height: AppSizes.paddingMedium),
-            _buildNotificationOption(
-              title: 'Copia de seguridad automática',
-              description: 'Realizar backup automático de los datos',
-              value: _autoBackup,
-              onChanged: (value) => setState(() => _autoBackup = value),
-            ),
-
-            const SizedBox(height: AppSizes.paddingExtraLarge),
-
-            // Sección: Gestión de Inventarios
-            _buildSectionTitle('Gestión de Inventarios'),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSizes.paddingMedium),
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Configuración de Inventarios',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.paddingSmall),
-                  Text(
-                    'Gestiona tus sedes, sucursales y configuración de inventarios',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.paddingMedium),
-                  SizedBox(
-                    width: double.infinity,
-                    height: AppSizes.buttonHeight,
-                    child: ElevatedButton(
-                      onPressed: _configureInventory,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.beigeSecondary, 
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                         Icon(Icons.inventory_2, size: 20, color: AppColors.darkGray),
-                          SizedBox(width: AppSizes.paddingSmall),
-                          Text(
-                            'Configurar Inventario',
-                            style: TextStyle(
-                              color: AppColors.darkGray, 
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: AppSizes.paddingExtraLarge),
-
+            
             // Botón de guardar configuración
             SizedBox(
               width: double.infinity,
@@ -180,13 +110,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: ElevatedButton(
                 onPressed: _saveSettings,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.redAccent,
+                  backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
                   ),
                 ),
                 child: const Text(
-                  'Guardar Configuración',
+                  'Cambiar plan',
                   style: TextStyle(
                     color: AppColors.textLight,
                     fontSize: 16,
@@ -195,23 +125,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ),
-
-            const SizedBox(height: AppSizes.paddingLarge),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSizes.paddingMedium),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: AppColors.redAccent,
         ),
       ),
     );

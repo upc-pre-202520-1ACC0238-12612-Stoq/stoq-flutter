@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../models/login_request.dart';
-import '../../dashboard/screens/dashboard_tabs_screen.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/widgets/logo_widget.dart';
 import 'register_screen.dart';
@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-               builder: (context) => DashboardTabsScreen(user: response),
+              builder: (context) => DashboardScreen(user: response),
             ),
           );
         }

@@ -4,12 +4,7 @@ class AppColors {
   // Colores principales
   static const Color primary = Color(0xFFEA580C); // Naranja
   static const Color secondary = Color(0xFFF5E6D3); // Beige de fondo
-  static const Color yellowHighlight = Color(0xFFFFEDB5);  // Amarillo destacado
-  static const Color beigeSecondary = Color(0xFFD9D593);   // Beige secundario
-  static const Color black = Color(0xFF000000);            // Negro
-  static const Color white = Color(0xFFFFFFFF);            // Blanco
-  static const Color darkGray = Color(0xFF302325);         // Gris oscuro
-  static const Color redAccent = Color(0xFFBC162A);        // Rojo acento
+  static const Color accent = Color(0xFFDC2626); // Rojo
   
   // Colores de estado
   static const Color success = Colors.green;
@@ -26,11 +21,6 @@ class AppColors {
   static const Color textPrimary = Colors.black87;
   static const Color textSecondary = Colors.black54;
   static const Color textLight = Colors.white;
-
-   // Colores con opacidad (para evitar usar withOpacity)
-  static const Color textLight90 = Color(0xE6FFFFFF); // 90% opacity
-  static const Color primary10 = Color(0x1AEA580C); // 10% opacity
-  static const Color primary30 = Color(0x4DEA580C); // 30% opacity
 }
 
 class AppSizes {
@@ -78,19 +68,6 @@ class AppStrings {
   static const String kitsProducts = 'Kits Productos';
   static const String returnProducts = 'Devolución Productos';
   static const String stock = 'Stock';
-  
-  // Settings
-  static const String settings = 'Ajustes';
-  static const String notificationSystem = 'Sistema de Notificaciones';
-  static const String lowStockAlerts = 'Alertas de stock bajo';
-  static const String expiryReminders = 'Recordatorios de productos próximos a vencer';
-  static const String pushNotifications = 'Notificaciones push';
-  static const String appPreferences = 'Preferencias de la App';
-  static const String darkMode = 'Modo oscuro';
-  static const String autoBackup = 'Copia de seguridad automática';
-  static const String inventoryManagement = 'Gestión de Inventarios';
-  static const String configureInventory = 'Configurar Inventario';
-  static const String saveSettings = 'Guardar Configuración';
   
   // Messages
   static const String comingSoon = 'Próximamente';
