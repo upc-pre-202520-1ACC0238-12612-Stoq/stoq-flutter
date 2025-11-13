@@ -12,6 +12,7 @@ import '../../products/screens/products_screen.dart';
 import '../../combos/screens/combos_screen.dart';
 import '../services/dashboard_service.dart';
 import '../models/product.dart';
+import '../../historial/screens/historial_screen.dart';
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
@@ -426,7 +427,12 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
                 icon: Icons.history,
                 title: 'Historial',
                 color: AppColors.success,
-                onTap: () => _showComingSoon('Historial'),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HistorialScreen(),
+                  ),
+                ),
               ),
               _buildInventoryAction(
                 icon: Icons.report,
