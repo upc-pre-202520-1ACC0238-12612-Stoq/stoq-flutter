@@ -82,4 +82,14 @@ class Branch {
       default: return Icons.location_on;
     }
   }
+
+  // Sobrescribir == y hashCode para comparación por ID
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Branch && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

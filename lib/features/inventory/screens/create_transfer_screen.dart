@@ -4,6 +4,7 @@ import '../models/branch_model.dart';
 import '../models/transfer_model.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/widgets/logo_widget.dart';
+import '../services/inventory_service.dart';
 
 class CreateTransferScreen extends StatefulWidget {
   final Product? preselectedProduct;
@@ -15,17 +16,90 @@ class CreateTransferScreen extends StatefulWidget {
 }
 
 class _CreateTransferScreenState extends State<CreateTransferScreen> {
+  final InventoryService _inventoryService = InventoryService();
   Product? _selectedProduct;
   Branch? _selectedFromBranch;
   Branch? _selectedToBranch;
   int _transferQuantity = 1;
   final TextEditingController _notesController = TextEditingController();
+  
+  // Productos desde la API convertidos a Product
+  List<Product> _availableProducts = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _loadProducts();
     // Si se preseleccionó un producto, usarlo
-    _selectedProduct = widget.preselectedProduct;
+    if (widget.preselectedProduct != null) {
+      _selectedProduct = widget.preselectedProduct;
+    }
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProducts() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final inventory = await _inventoryService.getInventory();
+      
+      // Convertir InventoryProduct a Product para compatibilidad
+      final products = inventory.productos.map((ip) {
+        // Crear stock distribuido entre las sedes (simulado)
+        final stockByBranch = <String, int>{};
+        for (var branch in Branch.sampleBranches) {
+          // Distribuir el stock total entre las sedes de manera proporcional
+          stockByBranch[branch.id] = (ip.cantidad / Branch.sampleBranches.length).round();
+        }
+        
+        return Product(
+          id: ip.productoId.toString(),
+          name: ip.productoNombre,
+          provider: ip.categoriaNombre,
+          entryDate: ip.fechaEntrada,
+          quantityPerUnit: ip.cantidad,
+          pricePerUnit: ip.precio,
+          unit: ip.unidadAbreviacion,
+          stockByBranch: stockByBranch,
+        );
+      }).toList();
+
+      setState(() {
+        _availableProducts = products;
+        _isLoading = false;
+        
+        // Si hay un producto preseleccionado, buscarlo en la lista
+        if (widget.preselectedProduct != null) {
+          _selectedProduct = _availableProducts.firstWhere(
+            (p) => p.id == widget.preselectedProduct!.id,
+            orElse: () => _availableProducts.isNotEmpty ? _availableProducts.first : widget.preselectedProduct!,
+          );
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        // Si falla, usar productos de ejemplo
+        _availableProducts = Product.sampleProducts;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar productos: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -125,26 +199,37 @@ class _CreateTransferScreenState extends State<CreateTransferScreen> {
             borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
             border: Border.all(color: AppColors.textSecondary.withOpacity(0.3)),
           ),
-          child: DropdownButton<Product>(
-            value: _selectedProduct,
-            isExpanded: true,
-            underline: const SizedBox(),
-            hint: const Text('Selecciona un producto'),
-            onChanged: (Product? newProduct) {
-              setState(() {
-                _selectedProduct = newProduct;
-                _selectedFromBranch = null;
-                _selectedToBranch = null;
-                _transferQuantity = 1;
-              });
-            },
-            items: Product.sampleProducts.map((product) {
-              return DropdownMenuItem(
-                value: product,
-                child: Text('${product.name} (Stock total: ${product.totalStock})'),
-              );
-            }).toList(),
-          ),
+          child: _isLoading
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              : DropdownButton<Product>(
+                  value: _selectedProduct,
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  hint: _availableProducts.isEmpty
+                      ? const Text('No hay productos disponibles')
+                      : const Text('Selecciona un producto'),
+                  onChanged: _availableProducts.isEmpty
+                      ? null
+                      : (Product? newProduct) {
+                          setState(() {
+                            _selectedProduct = newProduct;
+                            _selectedFromBranch = null;
+                            _selectedToBranch = null;
+                            _transferQuantity = 1;
+                          });
+                        },
+                  items: _availableProducts.map((product) {
+                    return DropdownMenuItem(
+                      value: product,
+                      child: Text('${product.name} (Stock total: ${product.totalStock})'),
+                    );
+                  }).toList(),
+                ),
         ),
       ],
     );
@@ -178,7 +263,12 @@ class _CreateTransferScreenState extends State<CreateTransferScreen> {
             border: Border.all(color: AppColors.textSecondary.withOpacity(0.3)),
           ),
           child: DropdownButton<Branch>(
-            value: selectedBranch,
+            value: selectedBranch != null && availableBranches.isNotEmpty
+                ? availableBranches.firstWhere(
+                    (b) => b.id == selectedBranch.id,
+                    orElse: () => availableBranches.first,
+                  )
+                : null,
             isExpanded: true,
             underline: const SizedBox(),
             hint: Text('Selecciona sede $branchType'),
@@ -192,7 +282,7 @@ class _CreateTransferScreenState extends State<CreateTransferScreen> {
                   ? ' - Stock: ${_selectedProduct!.stockInBranch(branch.id)}'
                   : '';
               
-              return DropdownMenuItem(
+              return DropdownMenuItem<Branch>(
                 value: branch,
                 child: Row(
                   children: [
@@ -212,18 +302,21 @@ class _CreateTransferScreenState extends State<CreateTransferScreen> {
   }
 
   List<Branch> _getAvailableBranches(String branchType) {
-    if (_selectedProduct == null) return Branch.sampleBranches;
+    // Siempre usar Branch.sampleBranches como fuente para asegurar que sean las mismas instancias
+    final allBranches = Branch.sampleBranches;
+    
+    if (_selectedProduct == null) return allBranches;
 
     if (branchType == 'from') {
       // Sedes origen: solo las que tienen stock del producto
-      return Branch.sampleBranches.where((branch) {
+      return allBranches.where((branch) {
         return _selectedProduct!.stockInBranch(branch.id) > 0 &&
-               branch.id != _selectedToBranch?.id;
+               (_selectedToBranch == null || branch.id != _selectedToBranch!.id);
       }).toList();
     } else {
       // Sedes destino: todas excepto la sede origen
-      return Branch.sampleBranches.where((branch) {
-        return branch.id != _selectedFromBranch?.id;
+      return allBranches.where((branch) {
+        return _selectedFromBranch == null || branch.id != _selectedFromBranch!.id;
       }).toList();
     }
   }
@@ -359,7 +452,8 @@ class _CreateTransferScreenState extends State<CreateTransferScreen> {
     final isValid = _selectedProduct != null &&
         _selectedFromBranch != null &&
         _selectedToBranch != null &&
-        _transferQuantity > 0;
+        _transferQuantity > 0 &&
+        !_isLoading;
 
     return SizedBox(
       width: double.infinity,
@@ -372,19 +466,42 @@ class _CreateTransferScreenState extends State<CreateTransferScreen> {
             borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
           ),
         ),
-        child: const Text(
-          'Crear Transferencia',
-          style: TextStyle(
-            color: AppColors.textLight,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        child: _isLoading
+            ? const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.textLight),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Creando...',
+                    style: TextStyle(
+                      color: AppColors.textLight,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              )
+            : const Text(
+                'Crear Transferencia',
+                style: TextStyle(
+                  color: AppColors.textLight,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }
 
-  void _validateAndCreateTransfer() {
+  Future<void> _validateAndCreateTransfer() async {
     if (_selectedProduct == null || _selectedFromBranch == null || _selectedToBranch == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -420,20 +537,69 @@ class _CreateTransferScreenState extends State<CreateTransferScreen> {
       notes: _notesController.text.isNotEmpty ? _notesController.text : null,
     );
 
-    // Aquí guardarías la transferencia en tu servicio
-    _saveTransfer(transfer);
+    // Guardar la transferencia
+    await _saveTransfer(transfer);
   }
 
-  void _saveTransfer(Transfer transfer) {
-    // Simular guardado de transferencia
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Transferencia creada: ${transfer.productName}'),
-        backgroundColor: AppColors.success,
-      ),
-    );
+  Future<void> _saveTransfer(Transfer transfer) async {
+    setState(() {
+      _isLoading = true;
+    });
 
-    // Navegar de regreso
-    Navigator.pop(context, transfer);
+    try {
+      // Aquí deberías llamar a un servicio de API para guardar la transferencia
+      // Por ahora simulamos el guardado
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // Actualizar el stock del producto localmente
+      if (_selectedProduct != null && _selectedFromBranch != null && _selectedToBranch != null) {
+        final updatedProduct = _selectedProduct!.transferStock(
+          fromBranchId: _selectedFromBranch!.id,
+          toBranchId: _selectedToBranch!.id,
+          quantity: _transferQuantity,
+        );
+        
+        // Actualizar en la lista
+        final index = _availableProducts.indexWhere((p) => p.id == updatedProduct.id);
+        if (index != -1) {
+          setState(() {
+            _availableProducts[index] = updatedProduct;
+            _selectedProduct = updatedProduct;
+          });
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '✅ Transferencia creada exitosamente\n'
+              '${transfer.productName}: ${transfer.quantity} ${_selectedProduct?.unit ?? ""} '
+              'de ${transfer.fromBranchName} a ${transfer.toBranchName}',
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
+        // Navegar de regreso después de un breve delay
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          Navigator.pop(context, transfer);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al crear transferencia: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 }
