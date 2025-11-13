@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'features/auth/screens/login_screen.dart';
-import 'features/dashboard/screens/dashboard_screen.dart';
+import 'features/dashboard/screens/dashboard_tabs_screen.dart';
 import 'features/auth/services/auth_service.dart';
 import 'shared/constants/app_constants.dart';
 
@@ -51,7 +51,7 @@ class _SplashScreenState extends State<SplashScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => DashboardScreen(user: userData),
+            builder: (context) => DashboardTabsScreen(user: userData),
           ),
         );
         return;
