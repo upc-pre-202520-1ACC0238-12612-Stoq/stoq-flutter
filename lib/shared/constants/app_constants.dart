@@ -76,7 +76,7 @@ class AppStrings {
   static const String inventory = 'Inventario';
   static const String addProducts = 'Agregar Productos';
   static const String kitsProducts = 'Kits Productos';
-  static const String returnProducts = 'Devolución Productos';
+  static const String salesProducts = 'Realizar Venta';
   static const String stock = 'Stock';
   
   // Settings

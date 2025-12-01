@@ -8,11 +8,20 @@ import '../../profile/screens/profile_screen.dart';
 import '../../inventory/screens/inventory_screen.dart';
 import '../../inventory/screens/branches_map_screen.dart';
 import '../../inventory/models/branch_model.dart';
+<<<<<<< HEAD
 import '../../inventory/screens/multi_branch_inventory_screen.dart';
+=======
+>>>>>>> main
 import '../../inventory/screens/inventory_management_screen.dart';
 import '../../products/screens/products_screen.dart';
 import '../../inventory/services/inventory_service.dart';
 import '../../inventory/models/inventory_models.dart';
+<<<<<<< HEAD
+=======
+import '../../combos/screens/combos_screen.dart';
+import '../../historial/screens/historial_screen.dart';
+import '../../sales/screens/sales_screen.dart';
+>>>>>>> main
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
@@ -27,7 +36,11 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final InventoryService _inventoryService = InventoryService();
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> main
   // Datos desde la API
   List<InventoryProduct> _inventoryProducts = [];
   List<InventoryBatch> _inventoryBatches = [];
@@ -71,8 +84,12 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
   int get _totalProducts => _inventoryProducts.length;
   int get _totalStock => _inventoryProducts.fold(0, (sum, p) => sum + p.cantidad);
   int get _lowStockCount => _inventoryProducts.where((p) => p.stockBajo).length;
+<<<<<<< HEAD
   double get _totalValue => _inventoryProducts.fold(0.0, (sum, p) => sum + p.total);
   
+=======
+
+>>>>>>> main
   // Obtener próxima fecha de entrada (más reciente)
   String get _nextDeliveryDate {
     if (_inventoryBatches.isEmpty) return 'N/A';
@@ -152,6 +169,17 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+            onPressed: _isLoading ? null : _loadDashboardData,
+            tooltip: 'Actualizar estadísticas',
+          ),
           PopupMenuButton(
             icon: const Icon(Icons.menu, color: AppColors.textPrimary),
             itemBuilder: (context) => [
@@ -284,14 +312,24 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
             icon: Icons.shopping_cart,
             text: 'Kits de Productos',
             color: AppColors.primary,
-            onPressed: () => _showComingSoon('Kits de Productos'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CombosScreen(),
+              ),
+            ),
           ),
           const SizedBox(height: 15),
           _buildActionButton(
-            icon: Icons.assignment_return,
-            text: 'Devoluciones',
-            color: AppColors.primary,
-            onPressed: () => _showComingSoon('Devoluciones'),
+            icon: Icons.point_of_sale,
+            text: AppStrings.salesProducts,
+            color: AppColors.success,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SalesScreen(),
+              ),
+            ),
           ),
           const SizedBox(height: 25),
 
@@ -383,33 +421,6 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
 
           const SizedBox(height: 20),
 
-          // Botón de Inventario Multi-sede
-          SizedBox(
-            width: double.infinity,
-            child: Card(
-              elevation: 3,
-              child: ListTile(
-                leading: const Icon(Icons.warehouse, color: AppColors.primary, size: 30),
-                title: const Text(
-                  'Inventario Multi-sede',
-                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
-                ),
-                subtitle: const Text('Gestión de stock por sede'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MultiBranchInventoryScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 15),
-
           // Botón rápido al inventario tradicional
           SizedBox(
             width: double.infinity,
@@ -477,7 +488,12 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
                 icon: Icons.history,
                 title: 'Historial',
                 color: AppColors.success,
-                onTap: () => _showComingSoon('Historial'),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HistorialScreen(),
+                  ),
+                ),
               ),
               _buildInventoryAction(
                 icon: Icons.report,
