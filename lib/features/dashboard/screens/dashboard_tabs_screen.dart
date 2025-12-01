@@ -8,20 +8,13 @@ import '../../profile/screens/profile_screen.dart';
 import '../../inventory/screens/inventory_screen.dart';
 import '../../inventory/screens/branches_map_screen.dart';
 import '../../inventory/models/branch_model.dart';
-<<<<<<< HEAD
-import '../../inventory/screens/multi_branch_inventory_screen.dart';
-=======
->>>>>>> main
 import '../../inventory/screens/inventory_management_screen.dart';
 import '../../products/screens/products_screen.dart';
 import '../../inventory/services/inventory_service.dart';
 import '../../inventory/models/inventory_models.dart';
-<<<<<<< HEAD
-=======
 import '../../combos/screens/combos_screen.dart';
 import '../../historial/screens/historial_screen.dart';
 import '../../sales/screens/sales_screen.dart';
->>>>>>> main
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
@@ -36,11 +29,6 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final InventoryService _inventoryService = InventoryService();
-<<<<<<< HEAD
-  
-=======
-
->>>>>>> main
   // Datos desde la API
   List<InventoryProduct> _inventoryProducts = [];
   List<InventoryBatch> _inventoryBatches = [];
@@ -84,12 +72,6 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
   int get _totalProducts => _inventoryProducts.length;
   int get _totalStock => _inventoryProducts.fold(0, (sum, p) => sum + p.cantidad);
   int get _lowStockCount => _inventoryProducts.where((p) => p.stockBajo).length;
-<<<<<<< HEAD
-  double get _totalValue => _inventoryProducts.fold(0.0, (sum, p) => sum + p.total);
-  
-=======
-
->>>>>>> main
   // Obtener próxima fecha de entrada (más reciente)
   String get _nextDeliveryDate {
     if (_inventoryBatches.isEmpty) return 'N/A';
