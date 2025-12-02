@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/branch_model.dart';
+import '../services/branch_service.dart';
+import '../widgets/add_branch_modal.dart';
 import '../../../shared/constants/app_constants.dart';
 
 class BranchesMapScreen extends StatefulWidget {
@@ -18,6 +20,9 @@ class _BranchesMapScreenState extends State<BranchesMapScreen> {
   final LatLng _center = const LatLng(-12.0464, -77.0428);
   Branch? _selectedBranch;
   bool _mapError = false;
+  final BranchService _branchService = BranchService();
+  List<Branch> _branches = [];
+  bool _isLoading = true;
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
@@ -35,6 +40,39 @@ class _BranchesMapScreenState extends State<BranchesMapScreen> {
     // En web, Google Maps puede tener problemas, mostrar lista directamente
     // En otras plataformas, intentar mostrar el mapa
     _mapError = kIsWeb;
+    _loadBranches();
+  }
+
+  Future<void> _loadBranches() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final branches = await _branchService.getBranches();
+      setState(() {
+        _branches = branches;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _branches = Branch.sampleBranches; // Fallback a datos mock
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showAddBranchModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AddBranchModal(
+        onBranchAdded: (branch) {
+          _loadBranches(); // Recargar sucursales después de agregar
+        },
+      ),
+    );
   }
 
   @override
@@ -50,6 +88,17 @@ class _BranchesMapScreenState extends State<BranchesMapScreen> {
               _buildLegendItem(Colors.green, 'Stock Bueno'),
               _buildLegendItem(Colors.orange, 'Stock Medio'),
               _buildLegendItem(Colors.red, 'Stock Crítico'),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.add_circle, color: AppColors.primary),
+                onPressed: _showAddBranchModal,
+                tooltip: 'Agregar nueva sucursal',
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, color: AppColors.primary),
+                onPressed: _loadBranches,
+                tooltip: 'Actualizar sucursales',
+              ),
             ],
           ),
         ),
@@ -153,11 +202,13 @@ class _BranchesMapScreenState extends State<BranchesMapScreen> {
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(AppSizes.paddingMedium),
-            itemCount: Branch.sampleBranches.length,
-            itemBuilder: (context, index) {
-              final branch = Branch.sampleBranches[index];
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView.builder(
+                  padding: const EdgeInsets.all(AppSizes.paddingMedium),
+                  itemCount: _branches.length,
+                  itemBuilder: (context, index) {
+                    final branch = _branches[index];
               return Card(
                 margin: const EdgeInsets.only(bottom: AppSizes.paddingMedium),
                 child: ListTile(
@@ -202,7 +253,7 @@ class _BranchesMapScreenState extends State<BranchesMapScreen> {
 
   Set<Marker> _createMarkers() {
     try {
-      return Branch.sampleBranches.map((branch) {
+      return _branches.map((branch) {
         return Marker(
           markerId: MarkerId(branch.id),
           position: LatLng(branch.latitude, branch.longitude),

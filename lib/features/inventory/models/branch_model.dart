@@ -21,6 +21,41 @@ class Branch {
     this.address = '',
   });
 
+  // Factory constructor para parsear JSON del API
+  factory Branch.fromJson(Map<String, dynamic> json) {
+    // Calcular alertLevel basado en stockTotal
+    int alert = 0;
+    if (json['stockTotal'] < 500) {
+      alert = 2; // Crítico
+    } else if (json['stockTotal'] < 1000) {
+      alert = 1; // Medio
+    }
+
+    return Branch(
+      id: json['id']?.toString() ?? '',
+      name: json['name'] ?? '',
+      type: json['type'] ?? 'sucursal',
+      latitude: (json['latitude'] ?? 0.0).toDouble(),
+      longitude: (json['longitude'] ?? 0.0).toDouble(),
+      stockTotal: json['stockTotal'] ?? 0,
+      alertLevel: alert,
+      address: json['address'] ?? '',
+    );
+  }
+
+  // Método para convertir a JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': int.tryParse(id) ?? 0,
+      'name': name,
+      'type': type,
+      'latitude': latitude,
+      'longitude': longitude,
+      'stockTotal': stockTotal,
+      'address': address,
+    };
+  }
+
   // Sedes de ejemplo enriquecidas
   static List<Branch> get sampleBranches => [
     Branch(

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/branch_model.dart';
+import '../services/branch_service.dart';
 import 'sedes_map_screen.dart';
-import 'inventory_management_screen.dart';
 import '../../../shared/constants/app_constants.dart';
-import '../../../shared/widgets/logo_widget.dart';
-import '../services/inventory_service.dart';
 import '../models/inventory_model.dart';
 
 class CreateInventoryScreen extends StatefulWidget {
@@ -18,6 +16,7 @@ class _CreateInventoryScreenState extends State<CreateInventoryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final BranchService _branchService = BranchService();
   
   Branch? _selectedBranch;
   bool _isCreating = false;
@@ -39,11 +38,14 @@ class _CreateInventoryScreenState extends State<CreateInventoryScreen> {
   }
 
   Future<void> _selectLocation() async {
+    // Cargar sucursales del API
+    final branches = await _branchService.getBranches();
+    
     final branch = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => SedesMapScreen(
-          branches: Branch.sampleBranches,
+          branches: branches,
         ),
       ),
     );
