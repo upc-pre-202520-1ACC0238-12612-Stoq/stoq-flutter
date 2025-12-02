@@ -96,4 +96,13 @@ class AppStrings {
   static const String comingSoon = 'Próximamente';
   static const String connectionError = 'Error de conexión';
   static const String loginError = 'Error al iniciar sesión';
+  
+  // Favorites
+  static const String favorites = 'Favoritos';
+  static const String addToFavorites = 'Agregar a favoritos';
+  static const String removeFromFavorites = 'Quitar de favoritos';
+  static const String noFavorites = 'No hay productos favoritos';
+  static const String noFavoritesMessage = 'Agrega productos a favoritos usando el icono de corazón';
+  static const String favoriteAdded = 'Producto agregado a favoritos';
+  static const String favoriteRemoved = 'Producto eliminado de favoritos';
 }

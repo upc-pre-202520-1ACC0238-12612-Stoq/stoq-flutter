@@ -3,8 +3,10 @@ import '../../../shared/constants/app_constants.dart';
 import '../../../shared/widgets/custom_widgets.dart';
 import '../models/product_models.dart';
 import '../services/product_service.dart';
+import '../services/favorites_service.dart';
 import '../widgets/add_product_modal.dart';
 import '../../dashboard/screens/scan_product_screen.dart';
+import 'favorites_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -15,10 +17,12 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   final ProductService _productService = ProductService();
+  final FavoritesService _favoritesService = FavoritesService();
   final TextEditingController _searchController = TextEditingController();
   
   List<Product> _products = [];
   List<Product> _filteredProducts = [];
+  Set<int> _favoriteIds = {};
   bool _isLoading = true;
   bool _showFilters = false;
 
@@ -26,6 +30,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void initState() {
     super.initState();
     _loadProducts();
+    _loadFavorites();
   }
 
   @override
@@ -50,12 +55,71 @@ class _ProductsScreenState extends State<ProductsScreen> {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al cargar productos: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar productos: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadFavorites() async {
+    try {
+      final favoriteIds = await _favoritesService.getAllFavoriteIds();
+      setState(() {
+        _favoriteIds = favoriteIds;
+      });
+    } catch (e) {
+      // Error silencioso al cargar favoritos
+      debugPrint('Error al cargar favoritos: $e');
+    }
+  }
+
+  Future<void> _toggleFavorite(Product product) async {
+    try {
+      final isFavorite = _favoriteIds.contains(product.id);
+      
+      if (isFavorite) {
+        await _favoritesService.removeFavorite(product.id);
+        setState(() {
+          _favoriteIds.remove(product.id);
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppStrings.favoriteRemoved),
+              backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        }
+      } else {
+        await _favoritesService.addFavorite(product);
+        setState(() {
+          _favoriteIds.add(product.id);
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppStrings.favoriteAdded),
+              backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al actualizar favorito: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -112,6 +176,27 @@ class _ProductsScreenState extends State<ProductsScreen> {
       appBar: CustomAppBar(
         title: 'Agregar Producto',
         showBackButton: true,
+        actions: [
+          Semantics(
+            label: AppStrings.favorites,
+            hint: 'Ver productos favoritos',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.favorite, color: AppColors.redAccent),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FavoritesScreen(),
+                  ),
+                ).then((_) {
+                  // Recargar favoritos cuando se regrese de la pantalla de favoritos
+                  _loadFavorites();
+                });
+              },
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -324,6 +409,37 @@ class _ProductsScreenState extends State<ProductsScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Botón de favorito
+                  Semantics(
+                    label: _favoriteIds.contains(product.id)
+                        ? AppStrings.removeFromFavorites
+                        : AppStrings.addToFavorites,
+                    hint: _favoriteIds.contains(product.id)
+                        ? 'Toca para quitar de favoritos'
+                        : 'Toca para agregar a favoritos',
+                    button: true,
+                    child: InkWell(
+                      onTap: () => _toggleFavorite(product),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          _favoriteIds.contains(product.id)
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          size: 20,
+                          color: _favoriteIds.contains(product.id)
+                              ? AppColors.redAccent
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
