@@ -11,6 +11,7 @@ class InventoryProduct {
   final int stockMinimo;
   final double total;
   final bool stockBajo;
+  final String? codigoBarras;
 
   InventoryProduct({
     required this.id,
@@ -25,6 +26,7 @@ class InventoryProduct {
     required this.stockMinimo,
     required this.total,
     required this.stockBajo,
+    this.codigoBarras,
   });
 
   factory InventoryProduct.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class InventoryProduct {
       stockMinimo: json['stockMinimo'] ?? 0,
       total: (json['total'] ?? 0).toDouble(),
       stockBajo: json['stockBajo'] ?? false,
+      codigoBarras: json['codigoBarras'],
     );
   }
 
@@ -58,6 +61,7 @@ class InventoryProduct {
       'stockMinimo': stockMinimo,
       'total': total,
       'stockBajo': stockBajo,
+      'codigoBarras': codigoBarras,
     };
   }
 }

@@ -15,6 +15,7 @@ import '../../inventory/models/inventory_models.dart';
 import '../../combos/screens/combos_screen.dart';
 import '../../historial/screens/historial_screen.dart';
 import '../../sales/screens/sales_screen.dart';
+import '../../barcode_order/screens/barcode_order_screen.dart';
 
 class DashboardTabsScreen extends StatefulWidget {
   final LoginResponse user;
@@ -312,6 +313,18 @@ class _DashboardTabsScreenState extends State<DashboardTabsScreen>
               context,
               MaterialPageRoute(
                 builder: (context) => const SalesScreen(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 15),
+          _buildActionButton(
+            icon: Icons.qr_code_scanner,
+            text: 'Escanear Pedido',
+            color: AppColors.info,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const BarcodeOrderScreen(),
               ),
             ),
           ),

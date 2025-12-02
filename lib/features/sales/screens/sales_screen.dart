@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/widgets/custom_widgets.dart';
 import '../../inventory/services/inventory_service.dart';
@@ -21,8 +23,10 @@ class _SalesScreenState extends State<SalesScreen> {
   final _notesController = TextEditingController();
   final _salesService = SalesService();
   final _inventoryService = InventoryService();
+  final _barcodeScanner = BarcodeScanner(formats: [BarcodeFormat.all]);
 
   // Estado del formulario
+  bool _isScanning = false;
   InventoryProduct? _selectedProduct;
   StockCheck? _stockCheck;
   List<InventoryProduct> _availableProducts = [];
@@ -41,6 +45,7 @@ class _SalesScreenState extends State<SalesScreen> {
     _customerNameController.dispose();
     _quantityController.dispose();
     _notesController.dispose();
+    _barcodeScanner.close();
     super.dispose();
   }
 
@@ -203,6 +208,165 @@ class _SalesScreenState extends State<SalesScreen> {
     });
   }
 
+  // Escanear código de barras
+  Future<void> _scanBarcode() async {
+    if (_availableProducts.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Espere a que carguen los productos'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Abrir cámara para capturar imagen del código de barras
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
+        imageQuality: 85,
+      );
+
+      if (image == null) return; // Usuario canceló
+
+      setState(() {
+        _isScanning = true;
+      });
+
+      // Procesar imagen con ML Kit Barcode Scanner
+      final inputImage = InputImage.fromFilePath(image.path);
+      final barcodes = await _barcodeScanner.processImage(inputImage);
+
+      if (barcodes.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se detectó ningún código de barras'),
+              backgroundColor: AppColors.warning,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Obtener el código de barras detectado
+      final barcode = barcodes.first;
+      final barcodeValue = barcode.rawValue ?? barcode.displayValue ?? '';
+
+      if (barcodeValue.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Código de barras vacío'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Buscar producto por código de barras en el inventario
+      final matchedProduct = _availableProducts.firstWhere(
+        (p) => p.codigoBarras == barcodeValue,
+        orElse: () => InventoryProduct(
+          id: -1,
+          productoId: -1,
+          productoNombre: '',
+          categoriaNombre: '',
+          unidadNombre: '',
+          unidadAbreviacion: '',
+          fechaEntrada: DateTime.now(),
+          cantidad: 0,
+          precio: 0,
+          stockMinimo: 0,
+          total: 0,
+          stockBajo: false,
+        ),
+      );
+
+      if (mounted) {
+        if (matchedProduct.id != -1) {
+          // Producto encontrado
+          _selectProduct(matchedProduct);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${matchedProduct.productoNombre} ($barcodeValue)'),
+              backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else {
+          // Producto no encontrado
+          _showProductNotFoundDialog(barcodeValue);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al escanear: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+        });
+      }
+    }
+  }
+
+  // Mostrar diálogo cuando el producto escaneado no está en inventario
+  void _showProductNotFoundDialog(String barcodeValue) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.qr_code, color: AppColors.warning),
+            SizedBox(width: 8),
+            Expanded(child: Text('Producto no encontrado')),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Código escaneado:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            SelectableText(
+              barcodeValue,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 18),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Este código de barras no está registrado en tu inventario.',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // El usuario puede seleccionar manualmente de la lista
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Seleccionar manual', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -252,13 +416,44 @@ class _SalesScreenState extends State<SalesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Seleccionar Producto',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Seleccionar Producto',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              // Botón escanear
+              ElevatedButton.icon(
+                onPressed: _isScanning || _isLoadingProducts ? null : _scanBarcode,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSizes.paddingMedium,
+                    vertical: AppSizes.paddingSmall,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+                  ),
+                ),
+                icon: _isScanning
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.qr_code_scanner, size: 18),
+                label: Text(_isScanning ? 'Escaneando...' : 'Escanear'),
+              ),
+            ],
           ),
           const SizedBox(height: AppSizes.paddingMedium),
 
